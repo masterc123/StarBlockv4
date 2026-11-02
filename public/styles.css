@@ -1,0 +1,1645 @@
+:root {
+    --sc-bg: rgba(7, 11, 17, 0.96);
+    --sc-steel-top: #374a63;
+    --sc-steel-mid: #1d2939;
+    --sc-steel-bot: #0c121b;
+    --sc-panel: linear-gradient(180deg, rgba(44, 60, 82, 0.98) 0%, rgba(22, 32, 46, 0.99) 24%, rgba(12, 18, 27, 0.99) 75%, rgba(7, 10, 16, 1) 100%);
+    --sc-crt-bg: radial-gradient(circle at 50% 45%, rgba(0, 42, 62, 0.42) 0%, rgba(4, 8, 14, 0.98) 88%);
+    --sc-bevel-outer: #5d7899;
+    --sc-bevel-inner: #243449;
+    --sc-border: #3d5470;
+    --sc-cyan: #00e5ff;
+    --sc-green: #00ff66;
+    --sc-amber: #ffaa00;
+    --sc-crimson: #ff2a4b;
+    --sc-zerg: #d946ef;
+    --sc-text: #e2f1ff;
+}
+
+* { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+body {
+    margin: 0; overflow: hidden;
+    background: #0a1018;
+    font-family: 'Chakra Petch', sans-serif;
+    color: var(--sc-text);
+}
+#game-container { position: relative; width: 100vw; height: 100vh; height: 100dvh; overflow: hidden; }
+
+/* --- CLICK-AND-DRAG RTS SELECTION BOX OVERLAY --- */
+#selection-box {
+    display: none;
+    position: absolute;
+    pointer-events: none;
+    z-index: 18;
+    border: 1.5px solid #00ff66;
+    background: rgba(0, 255, 102, 0.13);
+    box-shadow: 0 0 14px rgba(0, 255, 102, 0.38), inset 0 0 12px rgba(0, 255, 102, 0.18);
+}
+.sel-corner {
+    position: absolute;
+    width: 8px; height: 8px;
+    border-color: #b8ffda;
+    border-style: solid;
+}
+.sel-corner.tl { top: -2px; left: -2px; border-width: 2px 0 0 2px; }
+.sel-corner.tr { top: -2px; right: -2px; border-width: 2px 2px 0 0; }
+.sel-corner.bl { bottom: -2px; left: -2px; border-width: 0 0 2px 2px; }
+.sel-corner.br { bottom: -2px; right: -2px; border-width: 0 2px 2px 0; }
+#selection-box-count {
+    position: absolute;
+    top: -19px; left: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px; font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: #00ff66;
+    background: rgba(5, 10, 15, 0.94);
+    border: 1px solid #00ff66;
+    padding: 1px 6px;
+    white-space: nowrap;
+}
+
+/* --- STARCRAFT II TOP MENU, OBJECTIVE & RESOURCE HUD --- */
+#sc2-top-hud {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 10px; pointer-events: none; z-index: 12;
+    padding: 10px 14px;
+    background: linear-gradient(180deg, rgba(6, 10, 16, 0.85) 0%, rgba(6, 10, 16, 0) 100%);
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    visibility: visible;
+    transition:
+        transform 0.46s cubic-bezier(0.45, 0.05, 0.22, 1),
+        opacity 0.38s cubic-bezier(0.45, 0.05, 0.22, 1),
+        visibility 0.46s;
+    will-change: transform, opacity;
+}
+#sc2-top-left {
+    display: flex; flex-direction: column; gap: 5px;
+    max-width: 54vw; pointer-events: none;
+}
+.sc2-menu-strip {
+    display: flex; align-items: center; gap: 5px; pointer-events: auto;
+    padding-top: 1px;
+}
+.sc2-badge {
+    font-family: 'Orbitron', sans-serif; font-size: 9.5px; font-weight: 900;
+    background: linear-gradient(180deg, #1b364d 0%, #0b1926 100%);
+    color: var(--sc-cyan);
+    border: 1.5px solid #41729f;
+    border-radius: 3px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 3px 10px rgba(0,0,0,0.7);
+    padding: 4px 10px; letter-spacing: 1.2px;
+}
+.sc2-endless-btn {
+    background: linear-gradient(180deg, #27374d 0%, #111926 100%);
+    border: 1.5px solid #4e698a;
+    border-radius: 3px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 3px 10px rgba(0,0,0,0.7);
+    color: #d4e8ff; font-family: 'Orbitron', sans-serif;
+    font-size: 9px; font-weight: 800; padding: 4px 9px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 5px;
+    white-space: nowrap; transition: all 0.12s;
+}
+.sc2-endless-btn:hover {
+    border-color: var(--sc-cyan);
+    background: linear-gradient(180deg, #1e425e 0%, #0e2436 100%);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+}
+.sc2-f2-key {
+    font-family: 'JetBrains Mono', monospace; font-size: 8px;
+    background: rgba(255, 170, 0, 0.2); color: var(--sc-amber);
+    border: 1px solid rgba(255, 170, 0, 0.55); padding: 0 4px;
+}
+#btn-toggle-endless { border-color: #8a6421; color: var(--sc-amber); }
+#btn-toggle-endless:hover { border-color: var(--sc-amber); background: rgba(255, 170, 0, 0.22); color: #fff; }
+
+#sc2-objective-pill {
+    pointer-events: auto;
+    background: linear-gradient(90deg, rgba(10, 18, 28, 0.94) 0%, rgba(10, 18, 28, 0.72) 88%, rgba(10, 18, 28, 0) 100%);
+    border-left: 3px solid var(--sc-amber);
+    border-top: 1px solid rgba(93, 120, 153, 0.35);
+    border-bottom: 1px solid rgba(93, 120, 153, 0.35);
+    padding: 4px 14px 4px 8px; display: flex; align-items: center; gap: 6px;
+    overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    max-height: 36px;
+    transition:
+        transform 0.42s cubic-bezier(0.45, 0.05, 0.22, 1),
+        opacity 0.34s cubic-bezier(0.45, 0.05, 0.22, 1),
+        max-height 0.42s cubic-bezier(0.45, 0.05, 0.22, 1),
+        padding 0.38s cubic-bezier(0.45, 0.05, 0.22, 1),
+        border-width 0.38s ease;
+}
+.sc2-obj-diamond { color: var(--sc-amber); font-size: 11px; text-shadow: 0 0 6px rgba(255, 170, 0, 0.6); }
+.sc2-obj-prefix {
+    font-family: 'Orbitron', sans-serif; font-size: 9px; font-weight: 800;
+    color: #93b4d8; letter-spacing: 0.8px;
+}
+#directive-ticker {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: #ffe299; font-weight: 700; overflow: hidden; text-overflow: ellipsis;
+}
+
+#sc2-top-right-cluster {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    pointer-events: none;
+}
+
+#sc2-resources {
+    pointer-events: auto;
+    display: flex; align-items: center; gap: 6px;
+    background: var(--sc-panel);
+    border: 2px solid var(--sc-bevel-outer);
+    border-radius: 4px;
+    outline: 1px solid #070b10;
+    padding: 5px 10px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+.res-item {
+    display: flex; align-items: center; gap: 5px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    padding: 3px 8px;
+    background: linear-gradient(180deg, #05090f 0%, #0b131e 100%);
+    border: 1px solid #2b3f57;
+    box-shadow: inset 0 1px 4px rgba(0,0,0,0.9);
+    color: #f0f7ff;
+}
+.res-svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+/* --- TOP-RIGHT 3D AXIS BALL CAMERA EYE PERSPECTIVE GIZMO --- */
+#sc2-axis-ball-widget {
+    pointer-events: auto;
+    background: linear-gradient(180deg, rgba(16, 26, 40, 0.94) 0%, rgba(6, 11, 18, 0.96) 100%);
+    border: 1.5px solid #48688c;
+    border-radius: 5px;
+    outline: 1px solid #05080d;
+    padding: 5px 7px 6px 7px;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(200, 230, 255, 0.18);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    backdrop-filter: blur(4px);
+}
+.axis-ball-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: 1px solid #243850;
+    padding-bottom: 2px;
+}
+.axis-ball-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 8px;
+    font-weight: 800;
+    color: #93b8de;
+    letter-spacing: 0.8px;
+}
+#axis-ball-readout {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8.5px;
+    font-weight: 800;
+    color: var(--sc-cyan);
+    font-variant-numeric: tabular-nums;
+}
+.axis-ball-body {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+#axis-ball-canvas {
+    width: 78px;
+    height: 78px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 38% 34%, rgba(16, 46, 72, 0.72) 0%, rgba(5, 11, 19, 0.96) 76%);
+    border: 1.5px solid #355476;
+    box-shadow: inset 0 0 12px rgba(0, 229, 255, 0.18), 0 2px 8px rgba(0, 0, 0, 0.8);
+    cursor: grab;
+    touch-action: none;
+    display: block;
+}
+#axis-ball-canvas:active {
+    cursor: grabbing;
+    border-color: var(--sc-cyan);
+}
+.axis-ball-presets {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.axis-cardinal-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 3px;
+}
+.axis-preset-btn {
+    background: linear-gradient(180deg, #1b2a3d 0%, #0b131e 100%);
+    border: 1px solid #3b5575;
+    border-radius: 2px;
+    color: #b8d4f2;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    font-weight: 800;
+    padding: 2px 5px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.12s;
+}
+.axis-preset-btn:hover {
+    border-color: var(--sc-cyan);
+    color: #ffffff;
+    background: #183652;
+}
+.axis-preset-btn.active {
+    background: linear-gradient(180deg, #00d2ee 0%, #0284c7 100%);
+    border-color: #bae6fd;
+    color: #03070e;
+    box-shadow: 0 0 8px rgba(0, 229, 255, 0.45);
+}
+
+/* --- STARCRAFT II FULL-WIDTH TERRAN TACTICAL CONSOLE --- */
+#sc2-console {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    pointer-events: none; z-index: 12;
+    display: flex; justify-content: space-between; align-items: flex-end;
+    padding: 0 6px 4px 6px; gap: 6px;
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    visibility: visible;
+    transition:
+        transform 0.48s cubic-bezier(0.45, 0.05, 0.22, 1),
+        opacity 0.40s cubic-bezier(0.45, 0.05, 0.22, 1),
+        visibility 0.48s;
+    will-change: transform, opacity;
+}
+.sc2-apron-bg {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 158px;
+    background: linear-gradient(180deg, rgba(30, 42, 58, 0.96) 0%, rgba(15, 22, 32, 0.99) 35%, rgba(7, 11, 17, 1) 100%);
+    border-top: 2.5px solid #587394;
+    box-shadow: 0 -10px 28px rgba(0,0,0,0.92), inset 0 2px 0 rgba(210, 235, 255, 0.22);
+    z-index: -1;
+    pointer-events: auto;
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    transition:
+        transform 0.48s cubic-bezier(0.45, 0.05, 0.22, 1),
+        opacity 0.38s cubic-bezier(0.45, 0.05, 0.22, 1);
+}
+
+.sc2-panel {
+    pointer-events: auto;
+    background: var(--sc-panel);
+    border: 2px solid var(--sc-bevel-outer);
+    border-radius: 4px;
+    outline: 1px solid #06090f;
+    box-shadow: 0 -6px 24px rgba(0,0,0,0.92), inset 0 1.5px 0 rgba(215, 235, 255, 0.24), inset 0 0 18px rgba(0, 229, 255, 0.05);
+    position: relative; padding: 8px 9px;
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    max-height: 280px;
+    transition:
+        transform 0.46s cubic-bezier(0.45, 0.05, 0.22, 1),
+        opacity 0.36s cubic-bezier(0.45, 0.05, 0.22, 1),
+        max-width 0.42s cubic-bezier(0.45, 0.05, 0.22, 1),
+        max-height 0.42s cubic-bezier(0.45, 0.05, 0.22, 1),
+        padding 0.38s cubic-bezier(0.45, 0.05, 0.22, 1),
+        margin 0.38s cubic-bezier(0.45, 0.05, 0.22, 1),
+        border-width 0.36s ease,
+        width 0.28s cubic-bezier(0.45, 0.05, 0.22, 1),
+        height 0.28s cubic-bezier(0.45, 0.05, 0.22, 1);
+    will-change: transform, opacity;
+}
+#sc2-console #minimap-wing { transition-delay: 0.015s; }
+#sc2-console #command-wing { transition-delay: 0.03s; }
+#sc2-console #center-wing { transition-delay: 0.045s; }
+#sc2-console #portrait-wing { transition-delay: 0.06s; }
+.sc2-corner-rivet {
+    position: absolute; width: 5px; height: 5px; border-radius: 50%;
+    background: #8ba6c7; border: 1px solid #15202e;
+    box-shadow: inset 0 1px 0 #fff; pointer-events: none;
+    z-index: 2;
+}
+.sc2-corner-rivet.tl { top: 5px; left: 5px; }
+.sc2-corner-rivet.tr { top: 5px; right: 5px; }
+
+.sc2-hazard-trim-top {
+    position: absolute; top: 0; left: 28px; right: 28px; height: 3px;
+    background: repeating-linear-gradient(
+        -45deg,
+        rgba(255, 170, 0, 0.65),
+        rgba(255, 170, 0, 0.65) 6px,
+        rgba(15, 22, 32, 0.9) 6px,
+        rgba(15, 22, 32, 0.9) 12px
+    );
+    pointer-events: none;
+}
+
+.sc2-bezel-label {
+    font-family: 'Orbitron', sans-serif; font-size: 9px; font-weight: 800;
+    color: #a8c7e8; letter-spacing: 0.9px; margin-bottom: 5px;
+    padding: 0 4px 3px 4px; border-bottom: 1px solid #2e4259;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.sc2-wing-title {
+    text-shadow: 0 1px 2px #000;
+}
+
+/* LEFT WING: STARCRAFT II TACTICAL RADAR MINIMAP VIEWER */
+#minimap-wing {
+    width: 210px; height: 214px;
+    display: flex; flex-direction: column; flex-shrink: 0;
+    overflow: hidden; box-sizing: border-box;
+    transition: width 0.2s ease, height 0.2s ease;
+}
+#minimap-wing.minimap-expanded {
+    width: 292px; height: 298px;
+    z-index: 30;
+}
+.minimap-header-bar {
+    margin-bottom: 4px;
+    padding: 0 2px 3px 2px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 2px;
+    width: 100%;
+    box-sizing: border-box;
+}
+.minimap-tools { display: flex; gap: 3px; flex-shrink: 1; min-width: 0; }
+.mini-tool-btn {
+    background: linear-gradient(180deg, #1b2838 0%, #0d141e 100%);
+    border: 1px solid #415a78; color: var(--sc-cyan);
+    font-family: 'JetBrains Mono', monospace; font-size: 8px; font-weight: 800;
+    padding: 1px 4px; cursor: pointer; transition: all 0.1s;
+    white-space: nowrap; box-sizing: border-box;
+}
+.mini-tool-btn:hover { background: var(--sc-cyan); color: #04080e; border-color: #fff; }
+.minimap-bezel {
+    position: relative; flex: 1; width: 100%;
+    background: #03060a; border: 2px solid #2b425c;
+    box-shadow: inset 0 0 14px rgba(0,0,0,0.95);
+    overflow: hidden;
+}
+#minimap-canvas {
+    width: 100%; height: 100%; display: block;
+    cursor: crosshair;
+    touch-action: none;
+}
+.radar-reticle {
+    position: absolute; width: 8px; height: 8px;
+    border-color: rgba(0, 229, 255, 0.55); border-style: solid; pointer-events: none;
+}
+.radar-reticle.tl { top: 3px; left: 3px; border-width: 1.5px 0 0 1.5px; }
+.radar-reticle.tr { top: 3px; right: 3px; border-width: 1.5px 1.5px 0 0; }
+.radar-reticle.bl { bottom: 3px; left: 3px; border-width: 0 0 1.5px 1.5px; }
+.radar-reticle.br { bottom: 3px; right: 3px; border-width: 0 1.5px 1.5px 0; }
+
+/* CENTER WING: STARCRAFT II WIREFRAME SCHEMATIC + SUBGROUP MATRIX */
+#center-wing {
+    flex: 1 1 0%;
+    min-width: 0;
+    height: 196px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: 8px 12px 6px 12px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+#single-selection-view {
+    display: flex; gap: 10px; align-items: flex-start; width: 100%; min-height: min-content;
+}
+#wireframe-box {
+    width: 104px;
+    background: var(--sc-crt-bg);
+    border: 1.5px solid #354f6e;
+    box-shadow: inset 0 0 14px rgba(0,0,0,0.95);
+    display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+    padding: 5px 6px; flex-shrink: 0;
+}
+.wf-header-tag {
+    font-family: 'Orbitron', sans-serif; font-size: 7.5px; font-weight: 800;
+    color: #8ab0d8; letter-spacing: 1px; width: 100%; text-align: center;
+    border-bottom: 1px solid rgba(53, 79, 110, 0.55); padding-bottom: 2px;
+}
+#wireframe-svg {
+    width: 58px; height: 58px; flex-shrink: 0;
+    filter: drop-shadow(0 0 5px rgba(0, 255, 102, 0.4));
+}
+.wf-hp-blocks {
+    display: grid; grid-template-columns: repeat(12, 1fr); gap: 1.5px;
+    width: 100%; height: 6px; padding: 1px;
+    background: #04070b; border: 1px solid #24364d;
+}
+.wf-hp-pip {
+    height: 100%; background: #162230;
+}
+#wireframe-hp-text {
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--sc-green); text-align: center; line-height: 1.1;
+}
+#wireframe-shield-tag {
+    font-family: 'JetBrains Mono', monospace; font-size: 7.5px; font-weight: 800;
+    color: #9ec0e6; background: rgba(6, 12, 20, 0.85);
+    padding: 1px 5px; border: 1px solid #293d57; width: 100%; text-align: center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+#selection-details {
+    flex: 1; display: flex; flex-direction: column; justify-content: space-between;
+    gap: 5px; min-width: 0;
+}
+.sel-header-row {
+    display: flex; flex-direction: column; gap: 2px;
+    border-bottom: 1px solid #263952; padding-bottom: 4px;
+}
+.sel-title-line { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+#sel-title {
+    font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 900;
+    color: var(--sc-cyan); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    text-shadow: 0 0 8px rgba(0, 229, 255, 0.25);
+}
+.sel-badges-right { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+#sel-type-tag {
+    font-family: 'JetBrains Mono', monospace; font-size: 8px; font-weight: 800;
+    color: #a3c2e6; background: rgba(20, 34, 52, 0.85);
+    border: 1px solid #385273; padding: 1px 5px;
+}
+#sel-rank-tag {
+    font-family: 'JetBrains Mono', monospace; font-size: 8px; font-weight: 800;
+    color: var(--sc-amber); background: rgba(255, 170, 0, 0.14);
+    border: 1px solid rgba(255, 170, 0, 0.5); padding: 1px 6px;
+}
+#sel-subtitle {
+    font-size: 10.5px; color: #9cb8d9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+#unit-stats-strip {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;
+    background: linear-gradient(180deg, rgba(4, 8, 14, 0.88) 0%, rgba(9, 16, 26, 0.92) 100%);
+    border: 1px solid #2b405c; padding: 5px 8px;
+    box-shadow: inset 0 1px 5px rgba(0,0,0,0.85);
+}
+.stat-chip {
+    display: flex; flex-direction: column; line-height: 1.2;
+    border-left: 2px solid #355070; padding-left: 6px;
+}
+.stat-chip .sc-lbl {
+    font-family: 'JetBrains Mono', monospace; font-size: 7.5px;
+    color: #7c99bd; font-weight: 700; letter-spacing: 0.4px;
+}
+.stat-chip span:last-child {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    color: #f0f8ff; font-weight: 800; font-variant-numeric: tabular-nums;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* TURRET MOUNT SLOT BAR (LEFT / TOP / RIGHT) */
+#turret-slot-bar {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;
+}
+.turret-slot-pill {
+    background: linear-gradient(180deg, #131e2e 0%, #090f17 100%);
+    border: 1.5px solid #354e6e; color: #a8c5e6;
+    font-family: 'JetBrains Mono', monospace; font-size: 8.5px; font-weight: 800;
+    padding: 4px 6px; cursor: pointer; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+    transition: all 0.1s;
+}
+.turret-slot-pill:hover { border-color: var(--sc-cyan); color: #fff; }
+.turret-slot-pill.active {
+    border-color: var(--sc-amber);
+    background: linear-gradient(180deg, rgba(255, 170, 0, 0.28) 0%, rgba(255, 120, 0, 0.12) 100%);
+    color: #fff;
+    box-shadow: inset 0 0 10px rgba(255, 170, 0, 0.3);
+}
+.turret-slot-pill .ts-key { color: var(--sc-amber); font-size: 7.5px; }
+.turret-slot-pill .ts-val { color: var(--sc-cyan); font-size: 8.5px; }
+
+#touch-hold-ring {
+    display: none; position: absolute; pointer-events: none; z-index: 19;
+    width: 48px; height: 48px; border-radius: 50%;
+    border: 2.5px dashed #00ff66;
+    background: rgba(0, 255, 102, 0.14);
+    box-shadow: 0 0 14px rgba(0, 255, 102, 0.5);
+    transform: translate(-50%, -50%);
+}
+
+#prod-queue-panel {
+    display: none; background: rgba(4, 8, 14, 0.86);
+    border: 1px solid rgba(255, 170, 0, 0.5); padding: 4px 8px;
+}
+.prod-label {
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--sc-amber); margin-bottom: 3px; display: flex; justify-content: space-between;
+}
+.prod-track {
+    width: 100%; height: 6px; background: #06090e;
+    border: 1px solid var(--sc-amber); overflow: hidden; margin-bottom: 4px;
+}
+#prod-bar-fill {
+    width: 0%; height: 100%;
+    background: linear-gradient(90deg, #ff8800, #00ff66);
+    transition: width 0.1s;
+}
+.prod-slots { display: flex; gap: 4px; }
+.p-slot {
+    width: 22px; height: 13px; font-family: 'JetBrains Mono', monospace; font-size: 8px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    background: #0b111a; border: 1px solid #2e425c; color: #6c87a8;
+}
+.p-slot.active { border-color: var(--sc-amber); color: var(--sc-amber); background: rgba(255,170,0,0.22); }
+
+/* MULTI-UNIT SELECTION WIREFRAME GRID (STARCRAFT II SUBGROUP MATRIX) */
+#multi-selection-view {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column; gap: 5px;
+}
+.multi-header {
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    border-bottom: 1px solid #2a3d54; padding-bottom: 4px;
+}
+.multi-title-wrap {
+    display: flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden;
+}
+#multi-sel-title {
+    font-family: 'Orbitron', sans-serif; font-size: 10px; font-weight: 900;
+    color: var(--sc-green); white-space: nowrap;
+}
+#multi-subgroup-tabs {
+    display: flex; align-items: center; gap: 3px; overflow-x: auto;
+}
+.sc-subgroup-tab {
+    background: #0d1622; border: 1px solid #354e6b; color: #9fc0e6;
+    font-family: 'JetBrains Mono', monospace; font-size: 8px; font-weight: 800;
+    padding: 1px 6px; cursor: pointer; white-space: nowrap;
+}
+.sc-subgroup-tab:hover, .sc-subgroup-tab.active {
+    border-color: var(--sc-cyan); background: rgba(0, 229, 255, 0.2); color: #fff;
+}
+.multi-actions-right {
+    display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+}
+.form-squad-btn {
+    background: linear-gradient(180deg, rgba(0, 229, 255, 0.22) 0%, rgba(8, 22, 38, 0.95) 100%);
+    border: 1.5px solid #00e5ff;
+    color: #00e5ff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    font-weight: 800;
+    padding: 2px 7px;
+    cursor: pointer;
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+    transition: all 0.12s;
+    box-shadow: 0 0 8px rgba(0, 229, 255, 0.25);
+}
+.form-squad-btn:hover {
+    background: linear-gradient(180deg, rgba(0, 255, 102, 0.32) 0%, rgba(10, 32, 22, 0.95) 100%);
+    border-color: #00ff66;
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(0, 255, 102, 0.45);
+}
+.form-squad-btn.active {
+    background: linear-gradient(180deg, rgba(0, 255, 102, 0.26) 0%, rgba(8, 28, 18, 0.95) 100%);
+    border-color: #00ff66;
+    color: #00ff66;
+    box-shadow: 0 0 10px rgba(0, 255, 102, 0.35);
+}
+.multi-hint {
+    font-family: 'JetBrains Mono', monospace; font-size: 8px; color: #8fa6c2; white-space: nowrap;
+}
+#multi-unit-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-auto-rows: 54px;
+    gap: 4px;
+    overflow-y: auto;
+    flex: 1;
+    padding-right: 2px;
+}
+.sc-unit-tile {
+    background: radial-gradient(circle, rgba(0, 255, 102, 0.12) 0%, #060a10 90%);
+    border: 1.5px solid #2e4763;
+    padding: 3px 4px;
+    display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+    cursor: pointer; position: relative;
+    transition: border-color 0.1s, transform 0.1s, box-shadow 0.1s;
+}
+.sc-unit-tile:hover {
+    border-color: #00ff66;
+    box-shadow: 0 0 8px rgba(0, 255, 102, 0.35);
+    transform: translateY(-1px);
+}
+.sc-unit-tile svg { width: 25px; height: 25px; }
+.sc-unit-tile-name {
+    font-family: 'JetBrains Mono', monospace; font-size: 7px; font-weight: 800;
+    color: #d6eaff; text-transform: uppercase;
+}
+.sc-unit-tile-hp {
+    width: 100%; height: 4px; background: #040609; border: 1px solid #202d3d;
+}
+.sc-unit-tile-hp-fill { height: 100%; transition: width 0.12s; }
+
+/* COMM-LINK 3D HOLO PORTRAIT WING */
+#portrait-wing {
+    width: 146px; height: 178px;
+    display: flex; flex-direction: column; flex-shrink: 0;
+}
+#portrait-freq { color: var(--sc-amber); font-family: 'JetBrains Mono', monospace; font-size: 8px; }
+#portrait-viewport {
+    flex: 1; position: relative;
+    background: radial-gradient(circle at 50% 42%, rgba(0, 229, 255, 0.24) 0%, #03070d 85%);
+    border: 2px solid #324c6b;
+    box-shadow: inset 0 0 16px rgba(0,0,0,0.95);
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    padding: 0; overflow: hidden;
+}
+#portrait-3d-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: calc(100% - 19px);
+    display: block;
+    pointer-events: none;
+}
+#portrait-role-hud {
+    position: absolute;
+    top: 3px;
+    left: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7px;
+    font-weight: 800;
+    color: #00e5ff;
+    background: rgba(3, 8, 16, 0.72);
+    border: 1px solid rgba(0, 229, 255, 0.35);
+    padding: 0 4px;
+    pointer-events: none;
+    z-index: 2;
+    letter-spacing: 0.4px;
+}
+.portrait-reticle {
+    position: absolute; width: 7px; height: 7px;
+    border-color: rgba(0, 255, 102, 0.65); border-style: solid; pointer-events: none; z-index: 2;
+}
+.portrait-reticle.tl { top: 3px; left: 3px; border-width: 1.5px 0 0 1.5px; }
+.portrait-reticle.tr { top: 3px; right: 3px; border-width: 1.5px 1.5px 0 0; }
+.portrait-reticle.bl { bottom: 22px; left: 3px; border-width: 0 0 1.5px 1.5px; }
+.portrait-reticle.br { bottom: 22px; right: 3px; border-width: 0 1.5px 1.5px 0; }
+.portrait-scanlines {
+    position: absolute; inset: 0; pointer-events: none; z-index: 2;
+    background: repeating-linear-gradient(180deg, rgba(0, 229, 255, 0.05) 0px, rgba(0, 229, 255, 0.05) 1px, transparent 1px, transparent 3px);
+}
+#portrait-avatar-svg {
+    width: 78px; height: 78px; margin-top: 2px;
+    display: flex; align-items: center; justify-content: center;
+    animation: holoBob 2.6s ease-in-out infinite;
+    filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.35));
+}
+@keyframes holoBob {
+    0%, 100% { transform: translateY(0px) scale(1); }
+    50% { transform: translateY(-2px) scale(1.03); }
+}
+#portrait-quote {
+    position: relative; z-index: 3;
+    font-family: 'JetBrains Mono', monospace; font-size: 8px; font-weight: 800;
+    color: var(--sc-green); background: rgba(3, 6, 10, 0.94);
+    border-top: 1px solid #2b425c; width: 100%; text-align: center;
+    padding: 3px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* RIGHT WING: STARCRAFT II 3x3 COMMAND CARD */
+#command-wing {
+    width: 264px; height: 196px;
+    display: flex; flex-direction: column; flex-shrink: 0;
+    min-width: 0;
+    box-sizing: border-box;
+}
+#cmd-power-tag {
+    color: var(--sc-amber); font-family: 'JetBrains Mono', monospace; font-size: 9px;
+}
+#cmd-tooltip-bar {
+    display: none !important;
+}
+#command-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr); gap: 4px; flex: 1;
+}
+.cmd-cell {
+    position: relative;
+    background: linear-gradient(180deg, #1d2d42 0%, #101926 55%, #090e16 100%);
+    border: 1.5px solid #435d7d;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), inset 0 0 8px rgba(0, 229, 255, 0.05);
+    color: var(--sc-text);
+    cursor: pointer; padding: 3px 5px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    transition: all 0.1s; text-align: left; overflow: hidden;
+}
+.cmd-cell:hover:not(:disabled) {
+    border-color: var(--sc-cyan);
+    background: linear-gradient(180deg, #274160 0%, #142438 100%);
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.45), inset 0 0 8px rgba(0, 229, 255, 0.2);
+}
+.cmd-cell.active {
+    border-color: var(--sc-amber);
+    background: linear-gradient(180deg, rgba(255, 170, 0, 0.34) 0%, rgba(40, 26, 6, 0.95) 100%);
+    box-shadow: 0 0 10px rgba(255, 170, 0, 0.45);
+}
+.cmd-cell.equipped {
+    border-color: var(--sc-green);
+    background: linear-gradient(180deg, rgba(0, 255, 102, 0.25) 0%, rgba(6, 28, 16, 0.95) 100%);
+    box-shadow: inset 0 0 8px rgba(0, 255, 102, 0.25);
+}
+.cmd-cell:disabled { opacity: 0.24; cursor: not-allowed; border-color: #223042; }
+.cmd-top-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+.cmd-hotkey {
+    font-family: 'JetBrains Mono', monospace; font-size: 8px; font-weight: 800;
+    color: #ffd166; background: rgba(3, 6, 10, 0.88);
+    padding: 0 3.5px; border: 1px solid rgba(255, 170, 0, 0.55);
+}
+.cmd-icon-svg { width: 15px; height: 15px; opacity: 0.95; filter: drop-shadow(0 0 3px rgba(0,229,255,0.3)); }
+.cmd-name { font-size: 8.5px; font-weight: 700; text-transform: uppercase; line-height: 1.05; color: #fff; letter-spacing: 0.2px; }
+.cmd-cost {
+    font-family: 'JetBrains Mono', monospace; font-size: 8px; font-weight: 800;
+    font-variant-numeric: tabular-nums; color: var(--sc-cyan); align-self: flex-end;
+}
+
+/* --- MOBILE PORTRAIT & COMPACT LANDSCAPE MEDIA QUERIES (WITH MOBILE-ONLY SCROLLBARS) --- */
+@media (max-width: 900px), (orientation: portrait), (pointer: coarse) {
+    #sc2-top-hud { flex-direction: column; align-items: stretch; gap: 4px; padding: 4px; }
+    #sc2-top-left { max-width: 100%; }
+    .sc2-menu-strip {
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scrollbar-color: var(--sc-crimson) rgba(8, 12, 18, 0.8);
+        padding-bottom: 2px;
+    }
+    #sc2-objective-pill { max-width: 100%; padding: 2px 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    #sc2-resources {
+        justify-content: flex-start;
+        padding: 3px 6px;
+        clip-path: none;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scrollbar-color: var(--sc-crimson) rgba(8, 12, 18, 0.8);
+    }
+    .res-item { font-size: 10.5px; padding: 2px 6px; flex-shrink: 0; }
+    .sc2-apron-bg, #cmd-tooltip-bar { display: none; }
+
+    #sc2-console {
+        display: grid;
+        grid-template-columns: 118px minmax(0, 44%) minmax(0, 1fr);
+        grid-template-rows: 134px;
+        gap: 5px; padding: 0 4px 4px 4px;
+        max-height: 142px;
+        align-items: stretch;
+    }
+    #portrait-wing { display: none; }
+    #minimap-wing {
+        display: flex !important;
+        width: 118px;
+        height: 134px;
+        padding: 4px;
+        order: 1;
+        min-width: 0;
+        overflow: hidden;
+        box-sizing: border-box;
+    }
+    #minimap-wing .minimap-header-bar {
+        padding: 0 0 2px 0;
+        margin-bottom: 2px;
+        justify-content: stretch;
+    }
+    #minimap-wing .sc2-wing-title {
+        display: none;
+    }
+    #minimap-wing .minimap-tools {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        gap: 2px;
+    }
+    #minimap-wing .mini-tool-btn {
+        flex: 1 1 0;
+        min-width: 0;
+        padding: 2px 1px;
+        font-size: 7.5px;
+        text-align: center;
+        overflow: hidden;
+        text-overflow: clip;
+    }
+    #command-wing {
+        order: 2;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        height: 134px;
+        padding: 4px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        box-sizing: border-box;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scrollbar-color: var(--sc-crimson) rgba(8, 12, 18, 0.85);
+    }
+    #center-wing {
+        order: 3;
+        grid-column: auto;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        height: 134px;
+        min-height: 134px;
+        max-height: 134px;
+        padding: 5px 7px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        box-sizing: border-box;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scrollbar-color: var(--sc-crimson) rgba(8, 12, 18, 0.85);
+        justify-content: flex-start;
+    }
+    #single-selection-view {
+        height: auto;
+        min-height: min-content;
+        align-items: flex-start;
+        gap: 6px;
+    }
+    #wireframe-box { width: 54px; padding: 3px; position: sticky; top: 0; }
+    #wireframe-svg { width: 28px; height: 28px; }
+    .wf-header-tag, #wireframe-shield-tag, #sel-type-tag { display: none; }
+    #sel-subtitle {
+        display: block;
+        font-size: 8.5px;
+        white-space: normal;
+        line-height: 1.15;
+    }
+    #selection-details {
+        height: auto;
+        overflow-y: visible;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 2px;
+    }
+    #unit-stats-strip {
+        grid-template-columns: repeat(2, minmax(68px, 1fr));
+        gap: 3px;
+        padding: 3px 5px;
+    }
+    #turret-slot-bar {
+        max-height: 92px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-right: 2px;
+    }
+    #multi-unit-grid {
+        grid-template-columns: repeat(4, minmax(38px, 1fr));
+        grid-auto-rows: 40px;
+        max-height: 96px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scrollbar-color: var(--sc-crimson) rgba(8, 12, 18, 0.85);
+    }
+    #command-grid {
+        min-height: 98px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-auto-rows: minmax(28px, 1fr);
+        gap: 3px;
+    }
+    .cmd-name {
+        font-size: 7.5px;
+        white-space: normal;
+        word-break: break-word;
+    }
+
+    /* Mobile WebKit Scrollbar Styling (Only active on mobile/touch viewports) */
+    .sc2-menu-strip::-webkit-scrollbar,
+    #sc2-resources::-webkit-scrollbar,
+    #center-wing::-webkit-scrollbar,
+    #selection-details::-webkit-scrollbar,
+    #turret-slot-bar::-webkit-scrollbar,
+    #command-wing::-webkit-scrollbar,
+    #multi-unit-grid::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+    }
+    .sc2-menu-strip::-webkit-scrollbar-track,
+    #sc2-resources::-webkit-scrollbar-track,
+    #center-wing::-webkit-scrollbar-track,
+    #selection-details::-webkit-scrollbar-track,
+    #turret-slot-bar::-webkit-scrollbar-track,
+    #command-wing::-webkit-scrollbar-track,
+    #multi-unit-grid::-webkit-scrollbar-track {
+        background: rgba(6, 10, 16, 0.85);
+        border-radius: 3px;
+    }
+    .sc2-menu-strip::-webkit-scrollbar-thumb,
+    #sc2-resources::-webkit-scrollbar-thumb,
+    #center-wing::-webkit-scrollbar-thumb,
+    #selection-details::-webkit-scrollbar-thumb,
+    #turret-slot-bar::-webkit-scrollbar-thumb,
+    #command-wing::-webkit-scrollbar-thumb,
+    #multi-unit-grid::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #ff2a4b, #ff7700);
+        border-radius: 3px;
+    }
+}
+
+@media (max-width: 520px) and (orientation: portrait) {
+    #sc2-console {
+        grid-template-columns: 112px minmax(128px, 42%) 1fr;
+    }
+    #minimap-wing {
+        display: flex;
+        width: 112px;
+        height: 118px;
+    }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+    #portrait-wing, .sc2-apron-bg, #cmd-tooltip-bar { display: none; }
+    #minimap-wing { width: 124px; height: 130px; }
+    #command-wing {
+        width: 208px;
+        height: 130px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    #center-wing {
+        height: 130px;
+        padding: 5px 10px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        justify-content: flex-start;
+    }
+    #wireframe-box { width: 68px; }
+    #command-grid { min-height: 142px; }
+}
+
+/* --- MOBILE / TOUCH LAYOUT --- */
+#mobile-hint {
+    display: none; position: absolute; top: 42%; left: 50%; transform: translate(-50%, -50%);
+    background: rgba(6, 10, 15, 0.94); border: 1px solid var(--sc-amber); color: var(--sc-text);
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 9px 13px;
+    text-align: center; z-index: 20; pointer-events: none; line-height: 1.7;
+    animation: hintFade 8s forwards;
+}
+@keyframes hintFade { 0%, 72% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+
+@media (max-width: 940px), (pointer: coarse) {
+    #mobile-hint { display: block; }
+    #cursor-tag { display: none !important; }
+    .base-badge { font-size: 8px; padding: 2px 6px; gap: 4px; }
+    .base-badge svg { width: 11px; height: 11px; }
+    .hp-pip { width: 30px; height: 4px; }
+    .hp-pip.structure { width: 44px; height: 5px; }
+    .combat-float { font-size: 10px; }
+    #victory-modal { width: 92vw; padding: 18px 14px; }
+    #victory-modal h2 { font-size: 16px; }
+    #victory-modal p { font-size: 12px; margin-bottom: 14px; }
+    .action-btn { padding: 10px 12px; font-size: 10px; }
+    .modal-actions { flex-wrap: wrap; }
+}
+
+/* --- TACTICAL RED GLOW BORDER FRAME (ONLY APPEARS WHEN MAIN BASE HP IS LOW!) --- */
+#red-border-glow-frame {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 11;
+    opacity: 0;
+    visibility: hidden;
+    border: 2.5px solid rgba(255, 42, 75, 0.85);
+    box-shadow:
+        inset 0 0 34px rgba(255, 30, 65, 0.55),
+        inset 0 0 75px rgba(200, 10, 40, 0.28),
+        0 0 22px rgba(255, 42, 75, 0.65);
+    transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+#red-border-glow-frame.combat-alert {
+    opacity: 1;
+    visibility: visible;
+    animation: redBorderPulse 1.3s ease-in-out infinite;
+}
+@keyframes redBorderPulse {
+    0%, 100% {
+        border-color: rgba(255, 42, 75, 0.65);
+        box-shadow:
+            inset 0 0 24px rgba(255, 30, 65, 0.36),
+            inset 0 0 56px rgba(190, 10, 35, 0.18);
+    }
+    50% {
+        border-color: rgba(255, 75, 100, 0.98);
+        box-shadow:
+            inset 0 0 42px rgba(255, 42, 75, 0.65),
+            inset 0 0 92px rgba(220, 18, 50, 0.34);
+    }
+}
+.rbg-corner {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border-color: #ff2a4b;
+    border-style: solid;
+    filter: drop-shadow(0 0 8px rgba(255, 42, 75, 0.95));
+}
+.rbg-corner.tl { top: 3px; left: 3px; border-width: 3px 0 0 3px; }
+.rbg-corner.tr { top: 3px; right: 3px; border-width: 3px 3px 0 0; }
+.rbg-corner.bl { bottom: 3px; left: 3px; border-width: 0 0 3px 3px; }
+.rbg-corner.br { bottom: 3px; right: 3px; border-width: 0 3px 3px 0; }
+
+/* --- DYNAMIC WEATHER HUD PILL --- */
+.weather-pill-btn {
+    border-color: #38bdf8;
+    color: #e0f2fe;
+}
+.weather-status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #00ff66;
+    box-shadow: 0 0 6px #00ff66;
+    display: inline-block;
+}
+
+/* --- CURSOR & WORLD UI --- */
+#cursor-tag {
+    position: absolute; pointer-events: none; z-index: 20;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 800;
+    padding: 3px 7px; background: rgba(6, 10, 15, 0.94);
+    border: 1px solid var(--sc-green); color: var(--sc-green);
+    transform: translate(14px, 14px); display: none;
+}
+#victory-modal {
+    display: none; position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%);
+    width: min(440px, 92vw); background: #0b1017; border: 2px solid var(--sc-crimson);
+    padding: 22px; text-align: center; z-index: 30;
+    box-shadow: 0 25px 70px rgba(0,0,0,0.95), 0 0 28px rgba(255, 42, 75, 0.45);
+}
+#victory-modal h2 { margin: 0 0 10px 0; font-family: 'Orbitron', sans-serif; color: var(--sc-cyan); font-size: 18px; }
+#victory-modal p { color: #9ab0c9; font-size: 13px; line-height: 1.45; margin-bottom: 18px; }
+.modal-actions { display: flex; gap: 10px; justify-content: center; }
+.action-btn {
+    background: var(--sc-cyan); color: #05080c; border: none;
+    padding: 10px 14px; font-family: 'Orbitron', sans-serif;
+    font-weight: 800; font-size: 10px; cursor: pointer; text-transform: uppercase;
+}
+.action-btn.secondary { background: #1a2433; color: var(--sc-text); border: 1px solid var(--sc-border); }
+
+#world-ui { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 3; }
+.hp-pip {
+    position: absolute; width: 34px; height: 4px;
+    background: rgba(0,0,0,0.85); border: 1px solid rgba(255,255,255,0.25);
+    transform: translate(-50%, -50%);
+}
+.hp-pip.structure { width: 50px; height: 5px; border-color: rgba(0, 229, 255, 0.6); }
+.hp-pip.selected-unit { border-color: #00ff66; box-shadow: 0 0 6px rgba(0, 255, 102, 0.8); height: 5px; }
+.hp-pip-bar { height: 100%; width: 100%; transition: width 0.12s; }
+.combat-float {
+    position: absolute; font-family: 'JetBrains Mono', monospace; font-weight: 800;
+    font-size: 11px; transform: translate(-50%, -50%);
+    text-shadow: 0 1px 3px #000; animation: riseFade 0.65s ease-out forwards;
+}
+@keyframes riseFade {
+    0% { opacity: 1; margin-top: 0; }
+    100% { opacity: 0; margin-top: -24px; }
+}
+.base-badge {
+    position: absolute; transform: translate(-50%, -50%);
+    display: flex; align-items: center; gap: 5px;
+    padding: 2px 7px; font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; font-weight: 800;
+    background: rgba(7, 11, 17, 0.92); border: 1px solid;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.85); white-space: nowrap;
+}
+.base-badge svg { width: 13px; height: 13px; flex-shrink: 0; }
+.base-badge.human { border-color: var(--sc-cyan); color: var(--sc-cyan); }
+.base-badge.enemy { border-color: var(--sc-crimson); color: var(--sc-crimson); }
+.base-badge.zerg-sub { border-color: var(--sc-zerg); color: var(--sc-zerg); font-size: 8px; }
+
+/* PROMINENT TURRET UPGRADE BANNER & WEAPON RANGE VISUALIZER LEGEND */
+.turret-upgrade-banner {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(90deg, rgba(255, 170, 0, 0.28) 0%, rgba(255, 110, 0, 0.16) 50%, rgba(255, 170, 0, 0.28) 100%);
+    border: 1.5px solid #ffaa00;
+    color: #fff3d1;
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 800;
+    padding: 4px 8px; cursor: pointer;
+    box-shadow: 0 0 12px rgba(255, 170, 0, 0.35), inset 0 0 8px rgba(255, 170, 0, 0.2);
+    transition: all 0.12s;
+}
+.turret-upgrade-banner:hover:not(:disabled) {
+    background: linear-gradient(90deg, rgba(255, 195, 0, 0.45) 0%, rgba(255, 140, 0, 0.3) 100%);
+    border-color: #ffffff;
+    box-shadow: 0 0 16px rgba(255, 170, 0, 0.65);
+    transform: translateY(-1px);
+}
+.turret-upgrade-banner:disabled {
+    opacity: 0.48; cursor: not-allowed; border-color: #6b5322;
+}
+.turret-upgrade-banner .tub-left {
+    display: flex; align-items: center; gap: 6px; color: #ffd166;
+}
+.turret-upgrade-banner .tub-cost {
+    background: rgba(5, 8, 14, 0.9); border: 1px solid #ffaa00;
+    color: #00ff66; padding: 1px 6px; font-size: 8.5px;
+}
+
+.turret-range-legend {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
+    background: rgba(4, 8, 14, 0.85); border: 1px solid #263a52;
+    padding: 2px 6px; font-family: 'JetBrains Mono', monospace; font-size: 7.5px; font-weight: 800;
+}
+.trl-tag {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 0.5px 4px; border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(10, 18, 28, 0.9);
+}
+.trl-dot { width: 6px; height: 6px; display: inline-block; }
+
+.cmd-cell.upgrade-highlight {
+    border: 1.5px solid #ffaa00 !important;
+    background: linear-gradient(180deg, rgba(255, 170, 0, 0.36) 0%, rgba(45, 28, 4, 0.96) 100%) !important;
+    box-shadow: 0 0 12px rgba(255, 170, 0, 0.45), inset 0 0 8px rgba(255, 170, 0, 0.25);
+}
+.cmd-cell.upgrade-highlight:hover:not(:disabled) {
+    border-color: #ffffff !important;
+    box-shadow: 0 0 16px rgba(255, 195, 0, 0.75);
+}
+
+.turret-world-badge {
+    position: absolute; transform: translate(-50%, -50%);
+    pointer-events: auto; cursor: pointer;
+    display: flex; align-items: center; gap: 4px;
+    padding: 2px 6px; font-family: 'JetBrains Mono', monospace;
+    font-size: 8px; font-weight: 800;
+    background: rgba(6, 12, 20, 0.92); border: 1px solid #ffaa00;
+    color: #ffd166; box-shadow: 0 2px 10px rgba(0,0,0,0.85);
+    white-space: nowrap; transition: transform 0.1s, border-color 0.1s;
+}
+.turret-world-badge:hover {
+    border-color: #00ff66; color: #ffffff; transform: translate(-50%, -56%) scale(1.05);
+}
+.turret-world-badge .twb-upg {
+    background: #ffaa00; color: #04070b; padding: 0 4px; font-weight: 900;
+}
+
+/* ============================================================================
+   FLOATING RESTORE BAR, HUD SETTINGS MODAL & CLEAN MOBILE UI TOGGLES
+   ============================================================================ */
+#floating-ui-restore-bar {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    display: flex;
+    gap: 8px;
+    z-index: 38;
+    pointer-events: none;
+}
+.floating-hud-pill {
+    display: inline-flex;
+    align-items: center;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transform: translate3d(0, 16px, 0) scale(0.95);
+    background: rgba(5, 11, 20, 0.94);
+    border: 1.5px solid #00e5ff;
+    color: #00e5ff;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    padding: 7px 13px;
+    cursor: pointer;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.9), 0 0 12px rgba(0, 229, 255, 0.35);
+    transition:
+        transform 0.42s cubic-bezier(0.45, 0.05, 0.22, 1),
+        opacity 0.34s cubic-bezier(0.45, 0.05, 0.22, 1),
+        visibility 0.42s,
+        background 0.15s,
+        color 0.15s;
+}
+.floating-hud-pill.pill-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translate3d(0, 0, 0) scale(1);
+}
+.floating-hud-pill:hover {
+    background: #00e5ff;
+    color: #040810;
+}
+.floating-hud-pill.console-restore-pill {
+    border-color: #00ff66;
+    color: #00ff66;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.9), 0 0 12px rgba(0, 255, 102, 0.35);
+}
+.floating-hud-pill.console-restore-pill:hover {
+    background: #00ff66;
+    color: #040810;
+}
+
+.cmd-bezel-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.cmd-collapse-inline-btn {
+    pointer-events: auto;
+    background: rgba(8, 18, 30, 0.95);
+    border: 1px solid #2b4c70;
+    color: #93b7df;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8.5px;
+    font-weight: 800;
+    padding: 1px 6px;
+    cursor: pointer;
+    transition: all 0.12s;
+}
+.cmd-collapse-inline-btn:hover {
+    border-color: #00e5ff;
+    color: #00e5ff;
+}
+
+/* HUD Visibility Toggle Classes on #game-container (Smooth Ease-In/Out Slide & Fade Transitions) */
+#game-container.hud-all-hidden #sc2-top-hud {
+    opacity: 0 !important;
+    transform: translate3d(0, -125%, 0) !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+}
+#game-container.hud-all-hidden #sc2-top-hud * {
+    pointer-events: none !important;
+}
+#game-container.hud-all-hidden #mobile-hint,
+#game-container.hud-all-hidden #red-border-glow-frame {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+#game-container.hud-console-hidden #sc2-console,
+#game-container.hud-all-hidden #sc2-console {
+    opacity: 0 !important;
+    transform: translate3d(0, calc(100% + 42px), 0) !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+}
+#game-container.hud-console-hidden #sc2-console .sc2-apron-bg,
+#game-container.hud-all-hidden #sc2-console .sc2-apron-bg {
+    opacity: 0 !important;
+    transform: translate3d(0, 44px, 0) !important;
+}
+#game-container.hud-console-hidden #sc2-console .sc2-panel,
+#game-container.hud-all-hidden #sc2-console .sc2-panel {
+    opacity: 0 !important;
+    transform: translate3d(0, 36px, 0) scale(0.96) !important;
+    pointer-events: none !important;
+}
+#game-container.hud-console-hidden #sc2-console *,
+#game-container.hud-all-hidden #sc2-console * {
+    pointer-events: none !important;
+}
+#game-container.hud-hide-minimap #minimap-wing,
+#game-container.hud-hide-portrait #portrait-wing,
+#game-container.hud-hide-center #center-wing {
+    opacity: 0 !important;
+    transform: translate3d(0, 40px, 0) scale(0.94) !important;
+    max-width: 0 !important;
+    max-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-width: 0 !important;
+    outline: none !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+}
+#game-container.hud-hide-objective #sc2-objective-pill,
+#game-container.hud-hide-objective #mobile-hint {
+    opacity: 0 !important;
+    transform: translate3d(0, -18px, 0) !important;
+    max-height: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    border-width: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+}
+
+/* Compact Mobile HUD Mode (Clean Uncluttered Screen — keeps Minimap Viewer visible!) */
+#game-container.hud-minimal-mobile #portrait-wing,
+#game-container.hud-minimal-mobile #sc2-objective-pill,
+#game-container.hud-minimal-mobile #mobile-hint,
+#game-container.hud-minimal-mobile .res-item-secondary,
+#game-container.hud-minimal-mobile .desktop-only-hud-btn {
+    display: none !important;
+}
+
+/* HUD & Gameplay Settings Modal */
+#hud-settings-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(3, 7, 13, 0.84);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    z-index: 60;
+    pointer-events: auto;
+}
+.settings-modal-card {
+    width: min(440px, 95vw);
+    max-height: 90vh;
+    overflow-y: auto;
+    background: linear-gradient(180deg, #091322 0%, #050a12 100%);
+    border: 2px solid #00e5ff;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.95), 0 0 28px rgba(0, 229, 255, 0.28);
+    padding: 16px 18px;
+    color: #d8ecff;
+}
+.settings-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    border-bottom: 1px solid #1e3654;
+    padding-bottom: 10px;
+    margin-bottom: 8px;
+}
+.settings-kicker {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 800;
+    color: #00e5ff;
+    letter-spacing: 1.5px;
+}
+.settings-modal-header h3 {
+    margin: 2px 0 0 0;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 15px;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: 0.8px;
+}
+.settings-close-btn {
+    background: #0d1d30;
+    border: 1px solid #2b4a6f;
+    color: #93b7df;
+    width: 28px;
+    height: 28px;
+    font-size: 13px;
+    font-weight: 900;
+    cursor: pointer;
+}
+.settings-close-btn:hover {
+    border-color: #ff2a4b;
+    color: #ffffff;
+}
+.settings-subtext {
+    font-size: 11px;
+    color: #89a8cb;
+    margin: 0 0 12px 0;
+    line-height: 1.35;
+}
+.settings-toggle-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 14px;
+}
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    background: rgba(10, 21, 36, 0.85);
+    border: 1px solid #1c334f;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.settings-row:hover {
+    border-color: #00e5ff;
+}
+.settings-row input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #00e5ff;
+    cursor: pointer;
+}
+.settings-quick-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+.settings-act-btn {
+    padding: 8px 10px;
+    background: #0d2036;
+    border: 1px solid #284b73;
+    color: #00e5ff;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    font-weight: 800;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.12s;
+}
+.settings-act-btn:hover {
+    background: #00e5ff;
+    color: #040810;
+}
+.settings-act-btn.warn {
+    border-color: #ffaa00;
+    color: #ffaa00;
+}
+.settings-act-btn.warn:hover {
+    background: #ffaa00;
+    color: #040810;
+}
+
+/* Hide gameplay HUD overlays while Main Menu Cinematic or Loading Screen is active */
+#game-container.cinematic-overlay-active #sc2-top-hud,
+#game-container.cinematic-overlay-active #sc2-console,
+#game-container.cinematic-overlay-active #minimap-wing,
+#game-container.cinematic-overlay-active #floating-ui-restore-bar,
+#game-container.cinematic-overlay-active #mobile-hint,
+#game-container.cinematic-overlay-active #world-ui,
+#game-container.cinematic-overlay-active #red-border-glow-frame,
+#game-container.cinematic-overlay-active #cursor-tag {
+    display: none !important;
+}
+
+/* Hide Unit & Building HP Bars and Floating Health Indicators when disabled in Settings */
+#game-container.hud-hide-hpbars .hp-pip,
+#game-container.hud-hide-hpbars .combat-float {
+    display: none !important;
+}
+
+/* Automatic clean mobile defaults so UI never overwhelms small viewports */
+@media (max-width: 768px) {
+    .desktop-only-hud-btn,
+    .res-item-secondary,
+    #sc2-objective-pill,
+    #mobile-hint,
+    #red-border-glow-frame {
+        display: none !important;
+    }
+    #sc2-axis-ball-widget {
+        top: 40px !important;
+        right: 6px !important;
+        transform: scale(0.84);
+        transform-origin: top right;
+        display: flex !important;
+    }
+    #sc2-top-hud {
+        padding: 4px 6px !important;
+        gap: 4px !important;
+    }
+    .sc2-menu-strip {
+        gap: 3px !important;
+    }
+    .sc2-badge {
+        display: none !important;
+    }
+    .sc2-endless-btn {
+        padding: 3px 6px !important;
+        font-size: 9px !important;
+    }
+    #sc2-resources {
+        padding: 2px 6px !important;
+        gap: 6px !important;
+    }
+    .res-item {
+        font-size: 10px !important;
+    }
+    #sc2-console {
+        display: grid !important;
+        grid-template-columns: minmax(0, 48%) minmax(0, 52%) !important;
+        grid-template-rows: 132px !important;
+        height: 136px !important;
+        padding: 0 4px 4px 4px !important;
+        gap: 5px !important;
+    }
+    #portrait-wing {
+        display: none !important;
+    }
+    #minimap-wing {
+        display: flex !important;
+        position: fixed !important;
+        left: 6px !important;
+        bottom: 140px !important;
+        width: 132px !important;
+        height: 136px !important;
+        padding: 4px !important;
+        z-index: 24 !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+    }
+    #minimap-wing .minimap-header-bar {
+        padding: 0 0 2px 0 !important;
+        margin-bottom: 2px !important;
+        width: 100% !important;
+    }
+    #minimap-wing .sc2-wing-title {
+        display: none !important;
+    }
+    #minimap-wing .minimap-tools {
+        width: 100% !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        gap: 2px !important;
+    }
+    #minimap-wing .mini-tool-btn {
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+        padding: 2px 1px !important;
+        font-size: 7.5px !important;
+        text-align: center !important;
+    }
+    #minimap-wing.minimap-expanded {
+        width: 216px !important;
+        height: 222px !important;
+    }
+    #command-wing {
+        order: 1 !important;
+        grid-column: 1 !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        height: 132px !important;
+        padding: 4px 5px !important;
+        box-sizing: border-box !important;
+    }
+    #center-wing {
+        order: 2 !important;
+        grid-column: 2 !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        height: 132px !important;
+        padding: 4px 6px !important;
+        box-sizing: border-box !important;
+    }
+    #wireframe-box {
+        width: 50px !important;
+        padding: 2px !important;
+    }
+    #wireframe-svg {
+        width: 30px !important;
+        height: 30px !important;
+    }
+    #unit-stats-strip {
+        display: none !important;
+    }
+    #cmd-tooltip-bar {
+        display: none !important;
+    }
+    #command-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        grid-auto-rows: minmax(44px, 1fr) !important;
+        gap: 4px !important;
+    }
+    .cmd-cell {
+        min-height: 44px !important;
+        min-width: 44px !important;
+        padding: 3px 4px !important;
+        touch-action: manipulation;
+    }
+    .cmd-collapse-inline-btn,
+    .floating-hud-pill,
+    .sc2-endless-btn {
+        min-height: 36px !important;
+        touch-action: manipulation;
+    }
+    #sc2-console {
+        padding-bottom: max(4px, env(safe-area-inset-bottom)) !important;
+    }
+    #floating-ui-restore-bar {
+        bottom: max(12px, env(safe-area-inset-bottom)) !important;
+    }
+    #game-container.hud-console-hidden #minimap-wing {
+        bottom: max(10px, env(safe-area-inset-bottom)) !important;
+    }
+}
+

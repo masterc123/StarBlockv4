@@ -1,0 +1,1603 @@
+Use the following as the master implementation prompt for Gemini Argon. It instructs the AI to transform your existing RTS game into a highly detailed, realistic, procedurally generated world with dynamically modeled structures, terrain, infrastructure, and environmental simulation.
+
+# MASTER DEVELOPMENT DIRECTIVE: REALISTIC PROCEDURAL WORLD GENERATION AND ENVIRONMENTAL SIMULATION FOR AN ADVANCED RTS GAME
+
+You are acting as a senior game engine architect, procedural world-generation engineer, technical artist, 3D environment artist, simulation engineer, and gameplay systems developer.
+
+Your task is to significantly upgrade the existing RTS game into a highly immersive, realistic, detailed, living, and dynamically generated real-time strategy environment.
+
+The game is inspired by the environmental depth, strategic complexity, battlefield scale, and world-building of StarCraft and other advanced RTS titles. However, do not simply reproduce their assets or visual styles. Develop an original visual identity and environmental simulation system.
+
+This is not a request to create a static demonstration, concept scene, or collection of decorative objects. Implement a complete, integrated, procedural environment-generation system that works with the existing game architecture.
+
+The resulting world must look and behave like an actual geographical location with natural landscapes, settlements, infrastructure, industrial complexes, military installations, abandoned locations, environmental activity, and believable battlefield destruction.
+
+==================================================
+1. CRITICAL DEVELOPMENT REQUIREMENTS
+==================================================
+
+STRICTLY FOLLOW THESE REQUIREMENTS:
+
+1. Do not create environments using primitive shapes as final building models.
+2. Do not represent houses, factories, military installations, warehouses, towers, bridges, or other structures using combinations of basic cubes, spheres, cylinders, or flat geometric placeholders.
+3. Do not use simplistic box-shaped buildings with colored surfaces as substitutes for actual architectural models.
+4. Do not create a world consisting of flat terrain with randomly scattered decorative objects.
+5. Do not hardcode a limited collection of building arrangements and repeatedly reuse them throughout the map.
+6. Do not generate identical buildings with only different colors or scales.
+7. Do not use untextured geometry.
+8. Do not use flat, unrealistic, excessively saturated materials.
+9. Do not sacrifice environmental detail merely to make implementation easier.
+10. Do not replace existing gameplay systems unnecessarily.
+11. Do not remove existing mechanics, controls, unit systems, AI behavior, resource systems, camera controls, or user interface features.
+12. Do not create fake environmental interactions that are purely visual.
+13. Do not generate a single predetermined map and describe it as procedural generation.
+14. Do not leave important systems as TODO comments, placeholders, mockups, or unimplemented functions.
+
+Use actual 3D mesh geometry, realistic materials, physically based rendering, appropriate textures, procedural modeling, and environmental simulation.
+
+Preferred technologies:
+- Three.js for rendering and scene management.
+- WebGL or WebGPU where supported.
+- Procedural mesh generation.
+- BufferGeometry for custom-generated geometry.
+- InstancedMesh for repeated environmental assets.
+- GLTF/GLB models where appropriate.
+- PBR materials.
+- Procedural texture generation.
+- Noise-based terrain generation.
+- Physically based lighting.
+- Spatial partitioning and level-of-detail systems.
+
+You may introduce additional libraries if they materially improve the implementation.
+
+If the existing project already uses another rendering engine or framework, evaluate its architecture before introducing Three.js. Avoid creating competing rendering systems.
+
+==================================================
+2. PROCEDURAL WORLD GENERATION ENGINE
+==================================================
+
+Create a comprehensive procedural world-generation engine.
+
+The world must be generated dynamically rather than relying on a collection of manually positioned and hardcoded structures.
+
+The generator must consider:
+
+- Terrain elevation.
+- Geological formations.
+- Water distribution.
+- Climate.
+- Biomes.
+- Vegetation density.
+- Road connectivity.
+- Settlement locations.
+- Population density.
+- Industrial development.
+- Military infrastructure.
+- Transportation networks.
+- Environmental history.
+- Natural resource distribution.
+- Strategic gameplay requirements.
+
+Develop a generation pipeline that works in multiple stages.
+
+STAGE A: GEOGRAPHICAL GENERATION
+
+Generate a believable geographical foundation using combinations of:
+
+- Fractal Brownian Motion.
+- Perlin noise.
+- Simplex noise.
+- Domain warping.
+- Ridged multifractal noise.
+- Voronoi-based regional distribution.
+- Erosion simulation.
+- Heightmap generation.
+- Slope analysis.
+- Hydrological flow simulation.
+
+Generate naturally varying terrain rather than uniformly distributed hills.
+
+Include realistic geographical formations:
+
+- Mountain ranges.
+- Mountain foothills.
+- Rocky plateaus.
+- Valleys.
+- Rolling hills.
+- Flat plains.
+- River basins.
+- Canyons.
+- Natural depressions.
+- Coastal formations.
+- Beaches.
+- Wetlands.
+- Forest clearings.
+- Natural cliffs.
+- Underground entrances.
+- Rocky outcrops.
+
+Ensure that terrain transitions look natural.
+
+Mountains should have irregular ridges, slopes, geological layers, and varying elevations.
+
+Valleys should follow geographical logic.
+
+Water should follow natural elevation and drainage patterns.
+
+Avoid generating rivers that abruptly terminate in the middle of elevated terrain.
+
+STAGE B: BIOME DISTRIBUTION
+
+Implement a biome classification system based on temperature, moisture, elevation, and environmental conditions.
+
+Include:
+
+- Temperate forests.
+- Tropical forests.
+- Dense jungles.
+- Grasslands.
+- Savannas.
+- Deserts.
+- Snow-covered mountains.
+- Tundra.
+- Marshlands.
+- Swamps.
+- Rocky highlands.
+- Coastal environments.
+- Agricultural plains.
+- Volcanic wastelands.
+
+Every biome must have its own environmental characteristics.
+
+For example:
+
+A tropical biome should generate dense vegetation, broad-leaved trees, undergrowth, vines, wet ground, and humid atmospheric conditions.
+
+A desert biome should generate sand formations, exposed rocks, sparse vegetation, dry riverbeds, and wind-shaped terrain.
+
+A temperate biome should generate mixed forests, grasslands, rivers, scattered rocks, and agricultural clearings.
+
+A snowy biome should generate snow-covered terrain, coniferous trees, frozen water, exposed rocks, and appropriate atmospheric effects.
+
+Do not simply change the terrain color to represent different biomes.
+
+==================================================
+3. REALISTIC PROCEDURAL ARCHITECTURE GENERATION
+==================================================
+
+This is one of the highest-priority systems.
+
+Build a procedural architectural generation framework capable of producing numerous different buildings from architectural rules, geometric construction, procedural details, and material variation.
+
+Buildings must be constructed as actual 3D architectural meshes.
+
+Do not use primitive geometric placeholders as finished buildings.
+
+Use procedural mesh generation, custom vertex geometry, parametric modeling, architectural grammars, and modular construction systems.
+
+Create a reusable architectural pipeline consisting of:
+
+1. Building footprint generation.
+2. Architectural style selection.
+3. Structural layout generation.
+4. Wall geometry construction.
+5. Roof construction.
+6. Window and door placement.
+7. Exterior detailing.
+8. Material assignment.
+9. Weathering and aging.
+10. Damage and destruction variations.
+11. Collision generation.
+12. Navigation integration.
+
+Generate each building using its own randomized but structurally valid parameters.
+
+ARCHITECTURAL VARIATION:
+
+Buildings must have variation in:
+
+- Footprint dimensions.
+- Number of floors.
+- Roof geometry.
+- Roof pitch.
+- Wall construction.
+- Window placement.
+- Door placement.
+- Structural materials.
+- Exterior decoration.
+- Architectural age.
+- Maintenance condition.
+- Building orientation.
+- Building density.
+- Architectural style.
+
+Generate realistic architectural features:
+
+- Gabled roofs.
+- Hip roofs.
+- Flat concrete roofs.
+- Industrial roofing.
+- Roof tiles.
+- Corrugated metal roofing.
+- Chimneys.
+- Gutters.
+- Drainpipes.
+- Balconies.
+- Porches.
+- Verandas.
+- Exterior stairs.
+- Window frames.
+- Window glass.
+- Shutters.
+- Doors.
+- Garage doors.
+- Foundations.
+- Roof overhangs.
+- Wall supports.
+- Exterior air-conditioning units.
+- Roof ventilation.
+- Antennas.
+- Satellite dishes.
+- Fences.
+- Gates.
+- Exterior lighting.
+
+Buildings must have realistic proportions and believable construction.
+
+Do not generate random openings that overlap structural components or float outside walls.
+
+Use procedural rules to ensure architectural consistency.
+
+==================================================
+4. CIVILIAN SETTLEMENTS AND RESIDENTIAL AREAS
+==================================================
+
+Create a complete settlement-generation system.
+
+Settlements must be generated organically using road networks, terrain suitability, population density, accessibility, and available resources.
+
+Do not randomly scatter houses.
+
+Generate different settlement categories.
+
+A. RURAL VILLAGES
+
+Generate:
+
+- Small family houses.
+- Wooden houses.
+- Brick houses.
+- Concrete houses.
+- Agricultural buildings.
+- Barns.
+- Storage sheds.
+- Small markets.
+- Community centers.
+- Water wells.
+- Village roads.
+- Vegetable gardens.
+- Livestock enclosures.
+- Fences.
+- Small parking areas.
+- Electrical poles.
+- Water tanks.
+
+Rural villages should have irregular layouts and varying building distances.
+
+B. SUBURBAN NEIGHBORHOODS
+
+Generate:
+
+- Detached residential houses.
+- Two-story homes.
+- Modern family houses.
+- Apartment complexes.
+- Residential streets.
+- Garages.
+- Driveways.
+- Gardens.
+- Sidewalks.
+- Streetlights.
+- Public parks.
+- Bus stops.
+- Small commercial buildings.
+- Community facilities.
+
+C. URBAN DISTRICTS
+
+Generate:
+
+- Multi-story buildings.
+- Apartment blocks.
+- Commercial buildings.
+- Office buildings.
+- Shopping centers.
+- Restaurants.
+- Hotels.
+- Hospitals.
+- Schools.
+- Police stations.
+- Fire stations.
+- Parking structures.
+- Urban parks.
+- Public plazas.
+- Underground parking entrances.
+
+D. HISTORICAL SETTLEMENTS
+
+Generate:
+
+- Older stone buildings.
+- Traditional architecture.
+- Weathered houses.
+- Old marketplaces.
+- Historic churches.
+- Narrow streets.
+- Traditional bridges.
+- Old defensive walls.
+- Abandoned heritage structures.
+
+E. REMOTE SETTLEMENTS
+
+Generate:
+
+- Isolated houses.
+- Forest cabins.
+- Mountain lodges.
+- Hunting shelters.
+- Rural workshops.
+- Remote communication stations.
+- Small agricultural compounds.
+
+==================================================
+5. MILITARY INFRASTRUCTURE GENERATION
+==================================================
+
+Create realistic military environments.
+
+Do not make every military facility look like the same rectangular compound.
+
+Generate different military installations based on their purpose, surrounding geography, and faction characteristics.
+
+DEFENSIVE INSTALLATIONS:
+
+- Guard towers.
+- Watchtowers.
+- Fortified checkpoints.
+- Concrete bunkers.
+- Reinforced shelters.
+- Observation posts.
+- Defensive walls.
+- Sandbag fortifications.
+- Barbed-wire perimeter fencing.
+- Military gates.
+- Guard stations.
+- Protected vehicle entrances.
+- Radar installations.
+- Communications towers.
+
+MILITARY FACILITIES:
+
+- Military headquarters.
+- Barracks.
+- Vehicle maintenance buildings.
+- Equipment depots.
+- Supply warehouses.
+- Military garages.
+- Aircraft hangars.
+- Airfield facilities.
+- Command centers.
+- Medical facilities.
+- Training grounds.
+- Military vehicle parking areas.
+- Logistics compounds.
+- Naval facilities.
+- Underground bunkers.
+
+MILITARY ENVIRONMENTAL DETAILS:
+
+- Military vehicles.
+- Abandoned tanks.
+- Armored personnel carriers.
+- Transport trucks.
+- Supply containers.
+- Military tents.
+- Portable generators.
+- Communications equipment.
+- Floodlights.
+- Military signage.
+- Vehicle barriers.
+- Guard patrol areas.
+- Damaged equipment.
+- Crates and pallets.
+- Maintenance equipment.
+
+Generate military compounds with realistic spatial relationships.
+
+For example, an airbase should include runways, taxiways, hangars, maintenance buildings, aircraft parking areas, perimeter fencing, service roads, and control facilities.
+
+A military outpost should contain defensive structures, accommodation facilities, supply storage, vehicle parking, and access roads.
+
+==================================================
+6. ABANDONED AND DESTROYED ENVIRONMENTS
+==================================================
+
+Create a procedural abandoned-world generation system.
+
+Abandoned structures must have visual evidence of age, neglect, damage, and environmental deterioration.
+
+Generate:
+
+- Abandoned residential houses.
+- Collapsed buildings.
+- Burned structures.
+- Destroyed factories.
+- Ruined military compounds.
+- Damaged warehouses.
+- Abandoned industrial facilities.
+- Broken bridges.
+- Derelict railway stations.
+- Destroyed vehicles.
+- Crashed aircraft.
+- Abandoned ships.
+- Collapsed communication towers.
+- Overgrown roads.
+- Flooded buildings.
+- Ruined city districts.
+- Abandoned underground facilities.
+
+Implement different deterioration levels.
+
+LEVEL 1: Neglected.
+
+- Faded paint.
+- Dirty walls.
+- Broken exterior lights.
+- Overgrown vegetation.
+- Rusted metal.
+- Damaged windows.
+
+LEVEL 2: Damaged.
+
+- Cracked walls.
+- Missing roof sections.
+- Broken windows.
+- Damaged doors.
+- Structural deterioration.
+- Rubble around the building.
+
+LEVEL 3: Severely damaged.
+
+- Partial roof collapse.
+- Exposed interior structures.
+- Collapsed walls.
+- Fallen beams.
+- Broken floors.
+- Large debris piles.
+
+LEVEL 4: Destroyed.
+
+- Major structural collapse.
+- Foundation remains.
+- Rubble fields.
+- Scattered structural fragments.
+- Burned debris.
+- Exposed underground structures.
+
+Damage must modify the actual mesh or switch to an appropriately generated damaged mesh variant.
+
+Do not simulate major destruction merely by placing smoke particles over an intact building.
+
+==================================================
+7. ROADS AND TRANSPORTATION NETWORK
+==================================================
+
+Implement a procedural transportation network.
+
+Generate:
+
+- Highways.
+- Main roads.
+- Secondary roads.
+- Residential streets.
+- Rural roads.
+- Dirt roads.
+- Forest paths.
+- Mountain roads.
+- Industrial access roads.
+- Military roads.
+- Railway tracks.
+- Bridges.
+- Overpasses.
+- Underpasses.
+- Tunnels.
+- Airports.
+- Runways.
+- Helipads.
+- Ports.
+- Docks.
+- Parking lots.
+
+Roads must follow geographical constraints.
+
+Avoid roads passing directly through mountains, rivers, or buildings.
+
+Use spline-based road construction or another suitable mesh-generation method.
+
+Generate road surfaces with:
+
+- Asphalt.
+- Concrete.
+- Gravel.
+- Dirt.
+- Road markings.
+- Sidewalks.
+- Curbs.
+- Drainage channels.
+- Road shoulders.
+- Guardrails.
+- Traffic signs.
+- Streetlights.
+
+Include damage variations:
+
+- Cracks.
+- Potholes.
+- Flood damage.
+- Bomb craters.
+- Broken road sections.
+- Collapsed bridges.
+- Abandoned vehicles.
+- Debris.
+
+Connect settlements, industrial facilities, military installations, and resource locations using logical transportation networks.
+
+==================================================
+8. INDUSTRIAL AND ECONOMIC ENVIRONMENTS
+==================================================
+
+Generate realistic industrial districts and resource extraction facilities.
+
+Include:
+
+- Oil refineries.
+- Fuel storage facilities.
+- Coal mines.
+- Iron mines.
+- Gold mines.
+- Quarries.
+- Power stations.
+- Electrical substations.
+- Wind farms.
+- Solar farms.
+- Manufacturing factories.
+- Processing plants.
+- Chemical plants.
+- Warehouses.
+- Shipping terminals.
+- Container yards.
+- Agricultural processing facilities.
+- Water treatment plants.
+- Waste management facilities.
+
+Generate appropriate industrial architecture.
+
+Include detailed structural components:
+
+- Industrial roofs.
+- Steel frameworks.
+- Pipes.
+- Conveyors.
+- Storage tanks.
+- Ventilation systems.
+- Chimneys.
+- Loading docks.
+- Industrial platforms.
+- Service ladders.
+- Maintenance walkways.
+- Electrical equipment.
+- Exterior machinery.
+- Industrial fencing.
+
+Industrial facilities must look like functional places rather than randomly arranged objects.
+
+==================================================
+9. WATER SYSTEM AND HYDROLOGY
+==================================================
+
+Implement a believable water-generation system.
+
+Generate:
+
+- Rivers.
+- Lakes.
+- Ponds.
+- Streams.
+- Waterfalls.
+- Marshlands.
+- Swamps.
+- Floodplains.
+- Coastal waters.
+- Beaches.
+- Reservoirs.
+- Canals.
+- Irrigation channels.
+- Dams.
+- Drainage systems.
+
+Water should interact with terrain.
+
+Implement:
+
+- Water surface animation.
+- Flow direction.
+- Shoreline generation.
+- Depth variation.
+- Foam near appropriate shorelines.
+- Reflection.
+- Refraction where supported.
+- Water transparency.
+- Underwater color variation.
+- Wet ground.
+- Flooded terrain.
+- Water splashes.
+- Rain interaction.
+
+Create bridges and crossings where appropriate.
+
+Water should affect gameplay where possible.
+
+For example, infantry may require bridges or boats to cross major waterways, while vehicles may require designated crossings.
+
+==================================================
+10. VEGETATION AND WILDLIFE
+==================================================
+
+Create a complete vegetation-generation system.
+
+Do not use simple flat billboard objects as the primary representation of every tree.
+
+Use actual generated meshes or detailed imported models.
+
+Generate multiple tree species:
+
+- Oak trees.
+- Pine trees.
+- Birch trees.
+- Palm trees.
+- Tropical trees.
+- Dead trees.
+- Ancient trees.
+- Bushes.
+- Shrubs.
+- Bamboo.
+- Tall grass.
+- Ferns.
+- Vines.
+- Flowers.
+- Agricultural crops.
+
+Implement variation in:
+
+- Height.
+- Trunk thickness.
+- Branch arrangement.
+- Leaf density.
+- Canopy shape.
+- Rotation.
+- Age.
+- Health.
+- Seasonal appearance.
+
+Generate vegetation according to biome, slope, soil conditions, moisture, and elevation.
+
+Implement environmental animation:
+
+- Wind-responsive branches.
+- Moving leaves.
+- Grass movement.
+- Falling leaves.
+- Tree damage.
+- Burning vegetation.
+- Regrowth where appropriate.
+
+WILDLIFE:
+
+Generate appropriate wildlife for different biomes.
+
+Examples:
+
+- Birds.
+- Deer.
+- Rabbits.
+- Foxes.
+- Wolves.
+- Wild boars.
+- Fish.
+- Insects.
+- Livestock.
+
+Wildlife must have basic autonomous behavior.
+
+Animals should:
+
+- Move naturally.
+- Avoid obstacles.
+- Search for food.
+- React to nearby units.
+- Flee from combat.
+- Avoid dangerous environments.
+- Return to suitable habitats.
+
+Avoid making wildlife move in predictable straight lines.
+
+==================================================
+11. ENVIRONMENTAL POPULATION AND CIVILIAN SIMULATION
+==================================================
+
+Create an optional civilian population simulation.
+
+The world should not look completely lifeless outside military units.
+
+Generate civilian NPCs in populated areas.
+
+Include:
+
+- Pedestrians.
+- Workers.
+- Farmers.
+- Maintenance personnel.
+- Market vendors.
+- Vehicle drivers.
+- Emergency personnel.
+- Security personnel.
+
+Implement basic autonomous movement and schedules.
+
+Examples:
+
+- Pedestrians travel along sidewalks.
+- Workers enter and leave industrial facilities.
+- Farmers move around agricultural properties.
+- Civilians gather around public areas.
+- Vehicles follow roads.
+- Residents evacuate when combat approaches.
+- Emergency personnel respond to nearby incidents.
+
+Do not spawn civilians randomly across the entire map.
+
+Population density must depend on settlement type and environmental conditions.
+
+Allow settlements to become abandoned, evacuated, occupied, or damaged depending on gameplay events.
+
+==================================================
+12. REALISTIC TEXTURES AND MATERIAL SYSTEM
+==================================================
+
+Every major environmental asset must have an appropriate material and texture.
+
+Use physically based rendering.
+
+Support:
+
+- Albedo/base color maps.
+- Normal maps.
+- Roughness maps.
+- Metalness maps.
+- Ambient occlusion maps.
+- Height or displacement maps where appropriate.
+- Opacity maps.
+- Emissive maps.
+
+Generate material variations for:
+
+- Concrete.
+- Brick.
+- Wood.
+- Stone.
+- Asphalt.
+- Gravel.
+- Sand.
+- Soil.
+- Grass.
+- Leaves.
+- Steel.
+- Rusted metal.
+- Glass.
+- Ceramic roof tiles.
+- Painted metal.
+- Corrugated metal.
+- Water.
+- Snow.
+- Burned surfaces.
+
+Implement texture variation.
+
+Avoid obvious repeating patterns and uniform material coverage.
+
+Use procedural material variation, texture blending, decals, and vertex colors where appropriate.
+
+Buildings should show realistic material aging:
+
+- Dirt accumulation.
+- Rain streaks.
+- Surface discoloration.
+- Rust.
+- Moss.
+- Cracks.
+- Peeling paint.
+- Weathering.
+- Soot.
+- Burn marks.
+
+Terrain should support blended materials according to slope, elevation, biome, and moisture.
+
+For example, rocky slopes should expose stone, while flatter moist areas should contain soil and vegetation.
+
+==================================================
+13. ENVIRONMENTAL LIGHTING AND ATMOSPHERE
+==================================================
+
+Upgrade the environment's lighting system.
+
+Implement:
+
+- Dynamic directional sunlight.
+- Sky illumination.
+- Ambient lighting.
+- Realistic shadows.
+- Atmospheric fog.
+- Height-based fog.
+- Volumetric-looking smoke where practical.
+- Cloud shadows where supported.
+- Day/night cycles.
+- Sunrise.
+- Sunset.
+- Moonlight.
+- Nighttime building illumination.
+
+Create realistic atmospheric conditions.
+
+Support:
+
+- Clear skies.
+- Overcast skies.
+- Rain.
+- Heavy rain.
+- Thunderstorms.
+- Fog.
+- Morning mist.
+- Dust storms.
+- Snowfall.
+- Wind.
+- Haze.
+
+Weather must influence environmental appearance and, where appropriate, gameplay.
+
+Rain should darken exposed surfaces.
+
+Fog should reduce visibility.
+
+Snow should accumulate on appropriate surfaces if the simulation supports it.
+
+Nighttime scenes should not simply become uniformly darker. Buildings, streetlights, vehicle lights, industrial facilities, and military installations should produce appropriate illumination.
+
+==================================================
+14. ENVIRONMENTAL AUDIO
+==================================================
+
+Create a location-aware ambient audio system.
+
+Use spatial audio where supported.
+
+Generate or integrate sound categories:
+
+- Wind.
+- Birds.
+- Insects.
+- Flowing rivers.
+- Waterfalls.
+- Ocean waves.
+- Rain.
+- Thunder.
+- Distant traffic.
+- Industrial machinery.
+- Factory operations.
+- Construction activity.
+- Aircraft.
+- Trains.
+- Military activity.
+- Distant explosions.
+- Fire.
+- Structural collapse.
+
+Sound intensity and frequency should depend on player location and environmental conditions.
+
+Avoid playing every environmental sound simultaneously.
+
+Use spatial attenuation, distance filtering, ambient zones, and audio prioritization.
+
+==================================================
+15. ENVIRONMENTAL DESTRUCTION AND PERSISTENCE
+==================================================
+
+Create an integrated environmental destruction framework.
+
+Buildings, vegetation, roads, bridges, and selected infrastructure must react to damage.
+
+Implement:
+
+- Structural damage states.
+- Mesh deformation where appropriate.
+- Broken windows.
+- Wall destruction.
+- Roof collapse.
+- Falling structural components.
+- Debris generation.
+- Smoke.
+- Fire.
+- Dust.
+- Ground craters.
+- Damaged vegetation.
+- Destroyed bridges.
+- Road destruction.
+- Damaged power infrastructure.
+
+Destruction must be consistent with the actual structure.
+
+For example, destroying a building should produce appropriate debris, damaged geometry, and a changed navigation environment.
+
+Persist significant environmental changes where appropriate.
+
+If a building is destroyed, it should not magically return to its original state after the camera moves away or the scene reloads.
+
+Use deterministic damage states and save the necessary world changes.
+
+==================================================
+16. GAMEPLAY AND STRATEGIC ENVIRONMENT INTERACTIONS
+==================================================
+
+Connect the environment to existing RTS gameplay systems.
+
+Do not create a separate isolated environment that does not affect the actual game.
+
+Implement appropriate interactions:
+
+FORESTS:
+- Concealment.
+- Reduced visibility.
+- Movement restrictions for large vehicles.
+- Destructible vegetation where appropriate.
+
+HILLS:
+- Elevation advantages.
+- Improved observation.
+- Terrain-dependent firing visibility.
+
+BUILDINGS:
+- Infantry occupation.
+- Garrison mechanics.
+- Building damage.
+- Destruction.
+- Strategic control.
+
+BRIDGES:
+- Vehicle crossings.
+- Destruction.
+- Repair where supported.
+
+RIVERS:
+- Movement restrictions.
+- Naval crossings.
+- Natural defensive boundaries.
+
+MILITARY INSTALLATIONS:
+- Capture mechanics.
+- Strategic control.
+- Radar coverage.
+- Resource storage.
+- Supply functionality.
+
+INDUSTRIAL FACILITIES:
+- Resource generation.
+- Production bonuses.
+- Strategic importance.
+- Infrastructure damage.
+
+POWER FACILITIES:
+- Electrical supply.
+- Infrastructure dependency.
+- Power outages when destroyed.
+
+ROADS:
+- Vehicle movement efficiency.
+- Transportation routes.
+- Supply movement.
+
+RUINS:
+- Infantry cover.
+- Reduced movement speed.
+- Limited visibility.
+
+Ensure these systems interact with existing units, AI, navigation, and combat logic.
+
+==================================================
+17. PROCEDURAL DECORATION AND ENVIRONMENTAL STORYTELLING
+==================================================
+
+Add meaningful environmental details that communicate the history and condition of the world.
+
+Examples:
+
+A recently abandoned village might contain:
+- Open doors.
+- Parked vehicles.
+- Abandoned furniture.
+- Uncollected supplies.
+- Overgrown gardens.
+- Damaged electrical infrastructure.
+
+A former battlefield might contain:
+- Destroyed armored vehicles.
+- Craters.
+- Burned vegetation.
+- Rubble.
+- Military debris.
+- Damaged defensive positions.
+
+An abandoned industrial facility might contain:
+- Rusted machinery.
+- Broken windows.
+- Damaged pipelines.
+- Overgrown vegetation.
+- Abandoned equipment.
+- Weathered signage.
+
+A functioning industrial district might contain:
+- Smoke from chimneys.
+- Operating machinery.
+- Moving vehicles.
+- Loading activities.
+- Workers.
+- Illuminated buildings.
+
+Environmental details must be contextually generated.
+
+Do not place random props without considering the surrounding environment.
+
+==================================================
+18. PROCEDURAL MAP DENSITY AND WORLD COMPOSITION
+==================================================
+
+Develop a map composition algorithm.
+
+Each generated region should have a coherent identity.
+
+Examples of regional combinations:
+
+RURAL REGION:
+- Farms.
+- Small villages.
+- Agricultural roads.
+- Barns.
+- Livestock.
+- Water wells.
+- Forest boundaries.
+
+URBAN REGION:
+- Residential neighborhoods.
+- Commercial districts.
+- Industrial zones.
+- Roads.
+- Public facilities.
+- Parks.
+- Parking structures.
+
+MILITARY REGION:
+- Bases.
+- Checkpoints.
+- Radar installations.
+- Defensive structures.
+- Supply depots.
+- Vehicle facilities.
+
+ABANDONED REGION:
+- Ruined settlements.
+- Burned forests.
+- Collapsed buildings.
+- Abandoned vehicles.
+- Damaged roads.
+- Overgrown structures.
+
+INDUSTRIAL REGION:
+- Factories.
+- Warehouses.
+- Power facilities.
+- Fuel storage.
+- Railways.
+- Container yards.
+
+NATURAL REGION:
+- Mountains.
+- Forests.
+- Rivers.
+- Lakes.
+- Wildlife.
+- Natural formations.
+
+Transitions between regions should be gradual and geographically believable.
+
+Avoid sudden changes from dense city blocks to completely untouched forests without a reasonable geographical transition.
+
+==================================================
+19. PROCEDURAL VARIATION AND NON-REPETITION
+==================================================
+
+This is a critical requirement.
+
+Generated environments must not look repetitive.
+
+Develop a procedural variation system based on:
+
+- World seed.
+- Region seed.
+- Building seed.
+- Biome parameters.
+- Architectural style.
+- Material selection.
+- Structural parameters.
+- Environmental history.
+- Damage state.
+- Local terrain conditions.
+
+Every generated structure should receive deterministic parameters from its seed.
+
+Generate variations in:
+
+- Architectural geometry.
+- Building dimensions.
+- Roof structure.
+- Material combinations.
+- Window arrangements.
+- Exterior features.
+- Weathering.
+- Building age.
+- Damage.
+- Surrounding vegetation.
+- Nearby infrastructure.
+
+Use procedural architectural grammar and construction rules instead of choosing from a small list of predefined building models.
+
+Do not confuse procedural generation with randomly changing object colors.
+
+Actual geometric variation is required.
+
+==================================================
+20. PERFORMANCE AND LARGE-SCALE WORLD MANAGEMENT
+==================================================
+
+The environment must remain performant when generating large RTS maps.
+
+Implement:
+
+- Chunk-based world generation.
+- Spatial partitioning.
+- Frustum culling.
+- Occlusion culling where practical.
+- Level of detail.
+- Instanced rendering.
+- Geometry batching.
+- Texture atlases where appropriate.
+- Asset caching.
+- Lazy generation.
+- Background generation where supported.
+- Object pooling.
+- Efficient collision meshes.
+- Navigation mesh optimization.
+- Distance-based simulation updates.
+
+Use high-detail meshes near the camera and optimized representations at greater distances.
+
+Do not render unnecessary architectural details for distant buildings.
+
+Use different detail levels for:
+
+LOD 0: Full architectural detail.
+
+LOD 1: Reduced geometry and materials.
+
+LOD 2: Simplified geometry.
+
+LOD 3: Distant representation.
+
+For repeated vegetation, use instancing when appropriate.
+
+For unique buildings, preserve individual variation.
+
+Ensure that procedural generation does not freeze the game during map creation.
+
+==================================================
+21. WORLD GENERATION CONFIGURATION
+==================================================
+
+Provide a configurable world-generation system.
+
+Allow the game to dynamically determine:
+
+- Map dimensions.
+- Terrain roughness.
+- Mountain density.
+- Forest density.
+- River frequency.
+- Lake frequency.
+- Urban density.
+- Village frequency.
+- Industrial density.
+- Military installation density.
+- Abandoned structure density.
+- Vegetation density.
+- Wildlife population.
+- Civilian population.
+- Road density.
+- Environmental damage.
+- Weather conditions.
+- World seed.
+
+Different settings should create noticeably different geographical and environmental outcomes.
+
+Avoid simply increasing or decreasing the number of objects.
+
+For example, a high urban-density setting should generate coherent urban districts with connected roads, commercial areas, residential areas, and supporting infrastructure.
+
+A high abandonment setting should produce a world with more derelict buildings, damaged infrastructure, and overgrown locations.
+
+==================================================
+22. REQUIRED SOFTWARE ARCHITECTURE
+==================================================
+
+Organize the implementation into independent, reusable modules.
+
+Suggested architecture:
+
+WorldGenerator/
+    WorldGenerator
+    WorldSeedManager
+    RegionGenerator
+    BiomeGenerator
+    TerrainGenerator
+    HydrologyGenerator
+    ClimateGenerator
+
+Terrain/
+    HeightmapGenerator
+    TerrainMeshBuilder
+    TerrainMaterialSystem
+    ErosionSystem
+    TerrainChunkManager
+
+Architecture/
+    BuildingGenerator
+    ArchitecturalGrammar
+    ResidentialGenerator
+    CommercialGenerator
+    IndustrialGenerator
+    MilitaryStructureGenerator
+    AbandonedStructureGenerator
+    RoofGenerator
+    WallGenerator
+    WindowGenerator
+    DoorGenerator
+    BuildingDamageSystem
+
+Environment/
+    VegetationGenerator
+    TreeGenerator
+    GrassGenerator
+    WildlifeSimulation
+    CivilianSimulation
+    WeatherSystem
+    DayNightSystem
+    AmbientAudioSystem
+
+Infrastructure/
+    RoadGenerator
+    RailwayGenerator
+    BridgeGenerator
+    TunnelGenerator
+    PowerInfrastructureGenerator
+    WaterInfrastructureGenerator
+
+Simulation/
+    DestructionSystem
+    FireSystem
+    FloodSystem
+    EnvironmentalPersistence
+    EnvironmentalInteractionSystem
+
+Rendering/
+    PBRMaterialFactory
+    TextureGenerator
+    LightingManager
+    AtmosphereManager
+    LODManager
+    InstancingManager
+    SpatialPartitionManager
+
+Integration/
+    ExistingGameAdapter
+    NavigationAdapter
+    CombatEnvironmentAdapter
+    SaveLoadAdapter
+    WorldConfiguration
+
+Adapt the actual folder structure to the existing project rather than blindly creating unnecessary files.
+
+Maintain clear interfaces between systems.
+
+Avoid circular dependencies.
+
+==================================================
+23. THREE.JS IMPLEMENTATION STANDARDS
+==================================================
+
+Use Three.js properly.
+
+Recommended techniques:
+
+- BufferGeometry for custom architectural and terrain meshes.
+- ShaderMaterial for specialized environmental effects.
+- MeshStandardMaterial or MeshPhysicalMaterial for PBR rendering.
+- TextureLoader for external textures.
+- DataTexture for generated procedural textures.
+- InstancedMesh for vegetation and repeated environmental details.
+- LOD for distant objects.
+- Raycaster for appropriate environmental interaction.
+- SkeletonUtils for animated imported models when necessary.
+- GLTFLoader for compatible detailed 3D assets.
+- KTX2Loader for compressed textures where supported.
+- DRACOLoader for compressed geometry where appropriate.
+
+Use actual mesh construction for:
+
+- Roofs.
+- Walls.
+- Foundations.
+- Doors.
+- Window frames.
+- Structural supports.
+- Bridges.
+- Towers.
+- Industrial equipment.
+- Terrain formations.
+
+Use physically plausible material properties.
+
+Create reusable geometry-generation functions with configurable parameters.
+
+Ensure geometry has correct normals, UV coordinates, material groups, and collision representations.
+
+Avoid creating excessive draw calls.
+
+Use shared materials and geometry only where appropriate.
+
+Do not share mutable geometry between objects when individual destruction or deformation is required.
+
+==================================================
+24. QUALITY ASSURANCE AND VALIDATION
+==================================================
+
+Do not consider the implementation complete simply because objects appear on the screen.
+
+Validate the following:
+
+TERRAIN:
+- No severe terrain discontinuities.
+- Natural slopes.
+- Consistent water elevation.
+- No unintended floating terrain objects.
+
+BUILDINGS:
+- No missing walls.
+- No inverted roof geometry.
+- No floating windows.
+- No doors placed outside the building.
+- No excessive geometry intersections.
+- Correct collision boundaries.
+- Believable architectural proportions.
+
+ROADS:
+- Connected networks.
+- No roads passing through buildings.
+- Correct terrain alignment.
+- Functional bridges and crossings.
+
+VEGETATION:
+- Biome-appropriate distribution.
+- Correct terrain placement.
+- No excessive overlap.
+- Appropriate density.
+
+ENVIRONMENT:
+- No obvious repeating patterns.
+- No excessive random clutter.
+- No inappropriate object placement.
+- Correct lighting.
+- Correct material appearance.
+
+GAMEPLAY:
+- Units can navigate generated terrain.
+- Buildings interact with existing gameplay.
+- Environmental obstruction works.
+- Destruction updates collision and navigation.
+- Existing game mechanics remain operational.
+
+PERFORMANCE:
+- No uncontrolled object creation.
+- No excessive draw calls.
+- No major frame-rate drops.
+- No memory leaks.
+- No unnecessary regeneration.
+
+==================================================
+25. IMPLEMENTATION PRIORITIES
+==================================================
+
+Implement the work in the following order.
+
+PHASE 1 — ENVIRONMENT FOUNDATION
+- Analyze existing rendering architecture.
+- Build procedural terrain.
+- Implement biome distribution.
+- Implement geographical features.
+- Implement water generation.
+- Implement terrain materials.
+
+PHASE 2 — ARCHITECTURAL GENERATION
+- Build procedural mesh architecture.
+- Implement realistic residential structures.
+- Implement commercial buildings.
+- Implement industrial buildings.
+- Implement military facilities.
+- Implement abandoned structures.
+- Implement texture variation.
+
+PHASE 3 — WORLD INFRASTRUCTURE
+- Implement roads.
+- Implement bridges.
+- Implement railway networks.
+- Implement industrial infrastructure.
+- Implement settlements.
+- Implement strategic locations.
+
+PHASE 4 — ENVIRONMENTAL LIFE
+- Implement vegetation.
+- Implement wildlife.
+- Implement civilian activity.
+- Implement environmental audio.
+- Implement weather.
+- Implement day/night cycles.
+
+PHASE 5 — ENVIRONMENTAL SIMULATION
+- Implement destruction.
+- Implement structural damage.
+- Implement fires.
+- Implement flooding.
+- Implement environmental persistence.
+- Integrate environmental interactions with gameplay.
+
+PHASE 6 — OPTIMIZATION
+- Implement LOD.
+- Implement chunk management.
+- Implement instancing.
+- Implement spatial partitioning.
+- Optimize materials.
+- Optimize geometry.
+- Validate large-map performance.
+
+==================================================
+26. FINAL VISUAL EXPECTATIONS
+==================================================
+
+The final environment should resemble a detailed, believable, geographically coherent 3D world.
+
+It should contain:
+
+- Naturally formed landscapes.
+- Detailed terrain geometry.
+- Realistic rivers and lakes.
+- Dense forests.
+- Individually varied trees.
+- Organic settlements.
+- Detailed residential architecture.
+- Commercial districts.
+- Industrial facilities.
+- Military bases.
+- Abandoned buildings.
+- Destroyed infrastructure.
+- Connected transportation networks.
+- Bridges and railway systems.
+- Realistic material textures.
+- Weathered surfaces.
+- Dynamic environmental lighting.
+- Environmental animation.
+- Wildlife.
+- Civilian activity.
+- Persistent battlefield damage.
+
+The camera should reveal an environment with meaningful detail at both strategic zoom levels and closer inspection levels.
+
+At a high camera altitude, the player should recognize coherent geographical regions, road networks, settlements, industrial complexes, military installations, and natural formations.
+
+At a lower camera altitude, the player should see architectural details, vegetation, material textures, environmental objects, and believable surface variation.
+
+The world must feel constructed through an intelligent procedural system rather than manually assembled from a small number of repeated assets.
+
+==================================================
+27. FINAL EXECUTION INSTRUCTIONS
+==================================================
+
+Start by inspecting the entire existing project.
+
+Identify:
+
+- Current rendering engine.
+- Scene architecture.
+- Terrain implementation.
+- Existing model assets.
+- Material pipeline.
+- Unit rendering.
+- Camera implementation.
+- Navigation system.
+- Existing environmental interactions.
+- Map-generation system.
+- Save/load architecture.
+- Performance limitations.
+
+Preserve the existing working game.
+
+Do not rewrite the entire project without a technical reason.
+
+Then implement the procedural environment-generation system directly into the existing architecture.
+
+Make real code changes.
+
+Create actual modules, functions, mesh generators, material systems, and integration points.
+
+Do not respond with an implementation plan alone.
+
+Do not simply describe what should be implemented.
+
+Do not create a static mockup and claim the system is complete.
+
+Do not replace real architectural models with cubes or other primitive placeholders.
+
+Do not hardcode a few building layouts and call them dynamic procedural generation.
+
+Do not leave critical systems unimplemented.
+
+If a particular feature requires an external asset or library, determine the best compatible solution and integrate it properly.
+
+If external assets are unavailable, generate the geometry and materials procedurally instead of substituting primitive placeholders.
+
+After implementation:
+
+1. Run the project.
+2. Check for compilation errors.
+3. Check browser or engine runtime errors.
+4. Generate multiple worlds using different seeds.
+5. Inspect terrain and architectural variation.
+6. Test existing unit movement.
+7. Test environmental interactions.
+8. Check performance.
+9. Fix identified problems.
+10. Provide a concise implementation report listing completed modules, modified files, remaining limitations, and test results.
+
+FINAL OBJECTIVE:
+
+Transform the existing RTS game into a sophisticated procedural world simulator with realistic architecture, natural geography, detailed military and civilian infrastructure, environmental storytelling, dynamic weather, wildlife, and persistent destruction.
+
+Prioritize genuine 3D geometry, architectural authenticity, high-quality textures, procedural diversity, geographical coherence, and integration with existing gameplay.
+
+The result must be a living, detailed, believable RTS world — not a flat battlefield populated by primitive geometric placeholders.
+
+Important implementation constraint: Procedural geometry should generate architectural structure, not just decorate primitive buildings. Use GLTF/GLB assets when they provide better fidelity, and custom Three.js mesh generation for genuinely dynamic architecture. This gives Gemini room to use the strongest approach instead of forcing every object to be generated from scratch.

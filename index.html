@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>OUTPOST // SECTOR-09 — StarCraft II Tactical RTS Command</title>
+    <meta name="description" content="3D real-time tactical base-building and siege defense game with procedural canyon terrain, fog of war, modular turrets, and combined-arms combat." />
+    <meta property="og:title" content="OUTPOST // SECTOR-09 — StarCraft II Tactical RTS Command" />
+    <meta property="og:description" content="3D real-time tactical base-building and siege defense game with procedural canyon terrain, fog of war, modular turrets, and combined-arms combat." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800;900&family=Chakra+Petch:wght@500;600;700&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/vendor/three.min.js"></script>
+    <script src="/vendor/OrbitControls.js"></script>
+  </head>
+  <body>
+    <div id="game-container" class="cinematic-overlay-active">
+      <div id="world-ui"></div>
+
+      <!-- Tactical Red Glow Border Frame Overlay -->
+      <div id="red-border-glow-frame">
+        <div class="rbg-corner tl"></div>
+        <div class="rbg-corner tr"></div>
+        <div class="rbg-corner bl"></div>
+        <div class="rbg-corner br"></div>
+      </div>
+
+      <!-- Click-and-Drag / Mobile Hold-to-Drag RTS Selection Box Overlay -->
+      <div id="selection-box">
+        <div class="sel-corner tl"></div>
+        <div class="sel-corner tr"></div>
+        <div class="sel-corner bl"></div>
+        <div class="sel-corner br"></div>
+        <span id="selection-box-count"></span>
+      </div>
+
+      <!-- Mobile Hold-to-Select Indicator Ring -->
+      <div id="touch-hold-ring"></div>
+      <div id="cursor-tag">READY TO DEPLOY</div>
+      <div id="mobile-hint">HOLD &amp; DRAG: SELECT UNITS &nbsp;&middot;&nbsp; TAP: BUILD / COMMAND &nbsp;&middot;&nbsp; 2 FINGERS: PAN &nbsp;&middot;&nbsp; 3 FINGERS: ROTATE</div>
+
+      <!-- Floating Minimal Restore Controls when HUD or Console is Hidden -->
+      <div id="floating-ui-restore-bar">
+        <button id="btn-restore-all-ui" class="floating-hud-pill" onclick="window.toggleAllGameUI && window.toggleAllGameUI()">
+          👁 SHOW UI
+        </button>
+        <button id="btn-restore-console" class="floating-hud-pill console-restore-pill" onclick="window.toggleBottomConsole && window.toggleBottomConsole()">
+          ▲ BUILD / COMMANDS
+        </button>
+        <button id="btn-restore-debug" class="floating-hud-pill" onclick="window.toggleStarblockDebugMode && window.toggleStarblockDebugMode()" title="Open Live AI &amp; Graphics Debug Panel [F8 / F9]">
+          🐞 DEBUG
+        </button>
+      </div>
+
+      <!-- StarCraft II Terran Top Menu, Objective & Resource HUD -->
+      <div id="sc2-top-hud">
+        <!-- Top-Left: Streamlined Essential Command Strip -->
+        <div id="sc2-top-left">
+          <div class="sc2-menu-strip">
+            <span class="sc2-badge" id="mode-badge" style="cursor:pointer;" onclick="window.togglePlayerFaction && window.togglePlayerFaction()" title="Click to Switch Faction (Terran Dominion vs Solaris Protoss)">TERRAN DOMINION</span>
+            <button class="sc2-endless-btn" id="btn-main-menu-top" onclick="window.returnToMainMenu && window.returnToMainMenu()" title="Open Main Menu & Multiplayer Lobbies">
+              MENU
+            </button>
+            <button class="sc2-endless-btn" id="btn-select-army" onclick="selectAllArmy()" title="Select All Friendly Combat Units [F2]">
+              <span class="sc2-f2-key">F2</span> ARMY
+            </button>
+            <button class="sc2-endless-btn" id="btn-toggle-console" onclick="window.toggleBottomConsole && window.toggleBottomConsole()" title="Show or Hide Bottom Command Console">
+              ▼ PANEL
+            </button>
+            <button class="sc2-endless-btn" id="btn-hud-settings" onclick="window.toggleHudSettingsModal && window.toggleHudSettingsModal()" title="Open Tactical HUD, AI & Audio Settings">
+              ⚙ SETTINGS
+            </button>
+            <button class="sc2-endless-btn" id="btn-debug-mode" onclick="window.toggleStarblockDebugMode && window.toggleStarblockDebugMode()" title="Open Live AI &amp; Graphics Debug Panel [F8 / F9]" style="border-color: rgba(56,189,248,0.55); color: #7dd3fc;">
+              🐞 DEBUG
+            </button>
+          </div>
+          <div id="sc2-objective-pill">
+            <span class="sc2-obj-diamond">❖</span>
+            <span class="sc2-obj-prefix">OBJECTIVE:</span>
+            <span id="directive-ticker">Deploy Command HQ on flat ground, or drag a box to select units.</span>
+          </div>
+        </div>
+
+        <!-- Top-Right: Authentic SC2 Resources + 3D Axis Ball Camera Eye Perspective Gizmo -->
+        <div id="sc2-top-right-cluster">
+          <div id="sc2-resources">
+            <div class="res-item" title="Minerals (Requisition)">
+              <svg class="res-svg" viewBox="0 0 20 20" fill="none">
+                <polygon points="10,2 16,7 14,18 6,18 4,7" fill="#00e5ff" stroke="#a5f3fc" stroke-width="1.2"/>
+                <polygon points="10,2 14,18 10,15" fill="#0284c7"/>
+              </svg>
+              <span id="ui-req">200</span>
+            </div>
+            <div class="res-item" title="Mined Khaydarin Gems (Build a Mine Drill [8] on a Gem Crater to extract Gems for instant Troops &amp; Builds!)">
+              <svg class="res-svg" viewBox="0 0 20 20" fill="none">
+                <polygon points="10,1 17,7 14,19 6,19 3,7" fill="#e879f9" stroke="#fae8ff" stroke-width="1.3"/>
+                <polygon points="10,1 14,19 10,14" fill="#a21caf"/>
+              </svg>
+              <span id="ui-gems" style="color:#f0abfc;">0</span>
+            </div>
+            <div class="res-item" title="Bio &amp; Mech Supply">
+              <svg class="res-svg" viewBox="0 0 20 20" fill="none">
+                <polygon points="10,2 18,16 2,16" fill="rgba(255,170,0,0.22)" stroke="#ffaa00" stroke-width="1.6"/>
+                <polygon points="10,7 14,14 6,14" fill="#ffaa00"/>
+              </svg>
+              <span><span id="ui-supply">0</span>/26</span>
+            </div>
+            <div class="res-item res-item-secondary" title="Zerg Creep Radius">
+              <svg class="res-svg" viewBox="0 0 20 20" fill="none">
+                <circle cx="10" cy="10" r="7" fill="rgba(184,69,255,0.25)" stroke="#d946ef" stroke-width="1.5"/>
+                <circle cx="10" cy="10" r="3" fill="#d946ef"/>
+              </svg>
+              <span><span id="ui-creep">25</span>m</span>
+            </div>
+            <div class="res-item" title="Wave &amp; Mutation Multiplier">
+              <svg class="res-svg" viewBox="0 0 20 20" fill="none">
+                <polygon points="10,2 17,9 10,18 3,9" fill="rgba(255,42,75,0.25)" stroke="#ff2a4b" stroke-width="1.5"/>
+                <circle cx="10" cy="9" r="2.2" fill="#ff2a4b"/>
+              </svg>
+              <span>W<span id="ui-wave">1</span> (<span id="ui-scale">1.0x</span>)</span>
+            </div>
+            <div class="res-item chrono res-item-secondary" title="Mission Elapsed Time">
+              <svg class="res-svg" viewBox="0 0 20 20" fill="none">
+                <circle cx="10" cy="10" r="7.5" stroke="#93b4d8" stroke-width="1.5"/>
+                <polyline points="10,5.5 10,10 13.5,12" stroke="#00e5ff" stroke-width="1.5"/>
+              </svg>
+              <span id="ui-clock">00:00</span>
+            </div>
+          </div>
+
+          <!-- Top-Right 3D Axis Ball UI for Camera Eye Perspective Control -->
+          <div id="sc2-axis-ball-widget" title="Drag the 3D Axis Ball to rotate/tilt camera eye perspective, or click an axis node (N/S/E/W/TOP/TAC) to snap view">
+            <div class="axis-ball-header">
+              <span class="axis-ball-title">3D EYE AXIS</span>
+              <span id="axis-ball-readout">52° UP</span>
+            </div>
+            <div class="axis-ball-body">
+              <canvas id="axis-ball-canvas" width="92" height="92"></canvas>
+              <div class="axis-ball-presets">
+                <button type="button" class="axis-preset-btn active" data-view="tac" onclick="window.setCameraAxisPerspective && window.setCameraAxisPerspective('tac')" title="Standard Tactical Isometric Perspective">TAC</button>
+                <button type="button" class="axis-preset-btn" data-view="top" onclick="window.setCameraAxisPerspective && window.setCameraAxisPerspective('top')" title="High-Altitude Overhead Command View (+Y)">TOP</button>
+                <div class="axis-cardinal-grid">
+                  <button type="button" class="axis-preset-btn" data-view="n" onclick="window.setCameraAxisPerspective && window.setCameraAxisPerspective('n')" title="Look from North (-Z)">N</button>
+                  <button type="button" class="axis-preset-btn" data-view="e" onclick="window.setCameraAxisPerspective && window.setCameraAxisPerspective('e')" title="Look from East (+X)">E</button>
+                  <button type="button" class="axis-preset-btn" data-view="s" onclick="window.setCameraAxisPerspective && window.setCameraAxisPerspective('s')" title="Look from South (+Z)">S</button>
+                  <button type="button" class="axis-preset-btn" data-view="w" onclick="window.setCameraAxisPerspective && window.setCameraAxisPerspective('w')" title="Look from West (-X)">W</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- StarCraft II Terran Tactical Bottom Console -->
+      <div id="sc2-console">
+        <div class="sc2-apron-bg"></div>
+
+        <!-- Left Wing: SC2 Tactical Radar Minimap Viewer (Click/Drag to Pan Camera, Right-Click to Order Units) -->
+        <div class="sc2-panel" id="minimap-wing">
+          <div class="sc2-corner-rivet tl"></div>
+          <div class="sc2-corner-rivet tr"></div>
+          <div class="sc2-bezel-label minimap-header-bar">
+            <span class="sc2-wing-title">RADAR VIEWER</span>
+            <div class="minimap-tools">
+              <button class="mini-tool-btn" onclick="window.focusCameraOnSector && window.focusCameraOnSector('hq')" title="Center Camera on Allied HQ">HQ</button>
+              <button class="mini-tool-btn" onclick="window.focusCameraOnSector && window.focusCameraOnSector('solaris')" title="Center Camera on Solaris Chrono-Synod">SYN</button>
+              <button class="mini-tool-btn" onclick="window.focusCameraOnSector && window.focusCameraOnSector('hive')" title="Center Camera on Zerg Hive">HIVE</button>
+              <button class="mini-tool-btn" id="btn-minimap-expand" onclick="window.toggleMinimapExpand && window.toggleMinimapExpand()" title="Expand / Zoom Tactical Minimap Viewer">⤢</button>
+            </div>
+          </div>
+          <div class="minimap-bezel">
+            <canvas id="minimap-canvas" width="204" height="204"></canvas>
+            <div class="radar-reticle tl"></div>
+            <div class="radar-reticle tr"></div>
+            <div class="radar-reticle bl"></div>
+            <div class="radar-reticle br"></div>
+          </div>
+        </div>
+
+        <!-- Left-Center Wing: Authentic StarCraft II 3x3 Command Card (Positioned on Left Side of Building/Unit Info to Save Space) -->
+        <div class="sc2-panel" id="command-wing">
+          <div class="sc2-corner-rivet tl"></div>
+          <div class="sc2-corner-rivet tr"></div>
+          <div class="sc2-bezel-label">
+            <span class="sc2-wing-title" id="cmd-card-title">COMMAND CARD</span>
+            <div class="cmd-bezel-actions">
+              <span id="cmd-power-tag"></span>
+              <button class="cmd-collapse-inline-btn" onclick="window.toggleBottomConsole && window.toggleBottomConsole()" title="Minimize Bottom Console">▼ HIDE</button>
+            </div>
+          </div>
+          <div id="command-grid"></div>
+        </div>
+
+        <!-- Center Wing: SC2 Wireframe Schematic & Subgroup Selection Matrix (Building Info & Unit Info) -->
+        <div class="sc2-panel" id="center-wing">
+          <div class="sc2-corner-rivet tl"></div>
+          <div class="sc2-corner-rivet tr"></div>
+          <div class="sc2-hazard-trim-top"></div>
+
+          <!-- Single Unit / Building Readout Mode -->
+          <div id="single-selection-view">
+            <div id="wireframe-box">
+              <div class="wf-header-tag" id="wireframe-role-tag">TERRAN</div>
+              <svg id="wireframe-svg" viewBox="0 0 64 64" fill="none" stroke="#00ff66" stroke-width="2">
+                <polygon points="32,6 56,18 56,46 32,58 8,46 8,18" fill="rgba(0,255,102,0.08)"/>
+                <circle cx="32" cy="32" r="12"/>
+                <line x1="32" y1="6" x2="32" y2="20"/><line x1="32" y1="44" x2="32" y2="58"/>
+              </svg>
+              <div id="wireframe-hp-blocks" class="wf-hp-blocks"></div>
+              <div id="wireframe-hp-text">ONLINE</div>
+              <div id="wireframe-shield-tag">ARMOR: HVY</div>
+            </div>
+
+            <div id="selection-details">
+              <div class="sel-header-row">
+                <div class="sel-title-line">
+                  <div id="sel-title">TERRAN COMMAND</div>
+                  <div class="sel-badges-right">
+                    <span id="sel-type-tag">STRUCTURE</span>
+                    <span id="sel-rank-tag">DOMINION</span>
+                  </div>
+                </div>
+                <div id="sel-subtitle">Hold &amp; drag (Mobile) or click &amp; drag (PC) to select units</div>
+              </div>
+
+              <div id="unit-stats-strip">
+                <div class="stat-chip">
+                  <span class="sc-lbl">WEAPONRY</span>
+                  <span id="stat-weapon">C-14 GAUSS</span>
+                </div>
+                <div class="stat-chip">
+                  <span class="sc-lbl">OUTPUT / DMG</span>
+                  <span id="stat-dmg">25</span>
+                </div>
+                <div class="stat-chip">
+                  <span class="sc-lbl">ENGAGE RNG</span>
+                  <span id="stat-rng">9.0m</span>
+                </div>
+                <div class="stat-chip">
+                  <span class="sc-lbl">DIRECTIVE</span>
+                  <span id="stat-order">AUTO</span>
+                </div>
+              </div>
+
+              <div id="turret-slot-bar" style="display: none;"></div>
+
+              <div id="prod-queue-panel">
+                <div class="prod-label">
+                  <span id="prod-unit-name">TRAINING: RANGER</span>
+                  <span id="prod-pct">0%</span>
+                </div>
+                <div class="prod-track"><div id="prod-bar-fill"></div></div>
+                <div class="prod-slots">
+                  <span class="p-slot active">1</span>
+                  <span class="p-slot">2</span>
+                  <span class="p-slot">3</span>
+                  <span class="p-slot">4</span>
+                  <span class="p-slot">5</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Multi-Unit Selection Wireframe Grid (StarCraft II Subgroup & Wireframe Matrix) -->
+          <div id="multi-selection-view" style="display: none;">
+            <div class="multi-header">
+              <div class="multi-title-wrap">
+                <span id="multi-sel-title">TACTICAL SQUAD (0)</span>
+                <div id="multi-subgroup-tabs"></div>
+              </div>
+              <div class="multi-actions-right">
+                <button id="btn-form-squad" class="form-squad-btn active" onclick="window.triggerFormSquad && window.triggerFormSquad()" title="Form Squad: Automatically positions Melee in front-line vanguard, Ranged in a firing concave, and Medics in rear support on Move commands!">
+                  ❖ FORM SQUAD: CONCAVE
+                </button>
+                <span class="multi-hint">R-CLICK: MOVE/ATK</span>
+              </div>
+            </div>
+            <div id="multi-unit-grid"></div>
+          </div>
+        </div>
+
+        <!-- Right Wing: SC2 3D Adjutant / Commander Comm-Link Portrait -->
+        <div class="sc2-panel" id="portrait-wing">
+          <div class="sc2-corner-rivet tl"></div>
+          <div class="sc2-corner-rivet tr"></div>
+          <div class="sc2-bezel-label">
+            <span class="sc2-wing-title">ADJUTANT LINK</span>
+            <span id="portrait-freq">3D-CAM</span>
+          </div>
+          <div id="portrait-viewport">
+            <canvas id="portrait-3d-canvas" width="140" height="122"></canvas>
+            <div class="portrait-scanlines"></div>
+            <div class="portrait-reticle tl"></div>
+            <div class="portrait-reticle tr"></div>
+            <div class="portrait-reticle bl"></div>
+            <div class="portrait-reticle br"></div>
+            <div id="portrait-role-hud">TROOP CAM</div>
+            <div id="portrait-avatar-svg" style="display: none;"></div>
+            <div id="portrait-quote">"AWAITING ORDERS"</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tactical HUD & Interface Settings Modal -->
+      <div id="hud-settings-modal" style="display: none;">
+        <div class="settings-modal-card">
+          <div class="settings-modal-header">
+            <div>
+              <div class="settings-kicker">TERRAN TACTICAL INTERFACE</div>
+              <h3>HUD &amp; GAMEPLAY SETTINGS</h3>
+            </div>
+            <button class="settings-close-btn" onclick="window.toggleHudSettingsModal && window.toggleHudSettingsModal()">✕</button>
+          </div>
+          <p class="settings-subtext">Customize or hide UI panels on mobile &amp; desktop for maximum battlefield visibility.</p>
+
+          <div class="settings-toggle-list">
+            <label class="settings-row">
+              <span>Compact Mobile HUD (Clean Screen)</span>
+              <input type="checkbox" id="chk-hud-minimal" onchange="window.updateHudSetting && window.updateHudSetting('minimal', this.checked)" />
+            </label>
+            <label class="settings-row">
+              <span>Show Bottom Command Console</span>
+              <input type="checkbox" id="chk-hud-console" checked onchange="window.updateHudSetting && window.updateHudSetting('console', this.checked)" />
+            </label>
+            <label class="settings-row">
+              <span>Show Radar Minimap Wing</span>
+              <input type="checkbox" id="chk-hud-minimap" checked onchange="window.updateHudSetting && window.updateHudSetting('minimap', this.checked)" />
+            </label>
+            <label class="settings-row">
+              <span>Show 3D Adjutant Face Frame</span>
+              <input type="checkbox" id="chk-hud-portrait" checked onchange="window.updateHudSetting && window.updateHudSetting('portrait', this.checked)" />
+            </label>
+            <label class="settings-row">
+              <span>Show Unit Wireframe &amp; Stats Wing</span>
+              <input type="checkbox" id="chk-hud-center" checked onchange="window.updateHudSetting && window.updateHudSetting('center', this.checked)" />
+            </label>
+            <label class="settings-row">
+              <span>Show Objective &amp; Hint Banners</span>
+              <input type="checkbox" id="chk-hud-objective" checked onchange="window.updateHudSetting && window.updateHudSetting('objective', this.checked)" />
+            </label>
+            <label class="settings-row">
+              <span>Show Unit and Building HP Bars</span>
+              <input type="checkbox" id="chk-hud-hpbars" checked onchange="window.updateHudSetting && window.updateHudSetting('hpBars', this.checked)" />
+            </label>
+            <label class="settings-row">
+              <span>Combat Sound Effects (SFX)</span>
+              <input type="checkbox" id="chk-hud-sound" checked onchange="window.updateHudSetting && window.updateHudSetting('sound', this.checked)" />
+            </label>
+            <label class="settings-row">
+              <span>Forest &amp; Flora Density (<span id="val-wg-forestDensity">100%</span>)</span>
+              <input type="range" min="0.2" max="2.0" step="0.1" value="1.0" oninput="window.updateWorldGenConfig && window.updateWorldGenConfig('forestDensity', this.value)" />
+            </label>
+            <label class="settings-row">
+              <span>Settlement &amp; Urban Density (<span id="val-wg-urbanDensity">100%</span>)</span>
+              <input type="range" min="0.2" max="2.0" step="0.1" value="1.0" oninput="window.updateWorldGenConfig && window.updateWorldGenConfig('urbanDensity', this.value)" />
+            </label>
+            <label class="settings-row">
+              <span>War-Torn Ruin &amp; Decay Level (<span id="val-wg-abandonmentLevel">45%</span>)</span>
+              <input type="range" min="0.0" max="1.0" step="0.05" value="0.45" oninput="window.updateWorldGenConfig && window.updateWorldGenConfig('abandonmentLevel', this.value)" />
+            </label>
+            <label class="settings-row">
+              <span>Wildlife &amp; Civilian Activity (<span id="val-wg-wildlifePopulation">100%</span>)</span>
+              <input type="range" min="0.0" max="2.0" step="0.1" value="1.0" oninput="window.updateWorldGenConfig && window.updateWorldGenConfig('wildlifePopulation', this.value); window.updateWorldGenConfig && window.updateWorldGenConfig('civilianPopulation', this.value);" />
+            </label>
+            <label class="settings-row">
+              <span>Adaptive Graphics &amp; Frame Pacing</span>
+              <select id="sel-perf-quality" style="background:#081221;color:#38bdf8;border:1px solid rgba(56,189,248,0.45);padding:3px 8px;font-family:'JetBrains Mono',monospace;font-size:11px;" onchange="window.GAME_API && window.GAME_API.setQualityPreset && window.GAME_API.setQualityPreset(this.value)">
+                <option value="AUTO" selected>AUTO (ADAPTIVE 60 FPS)</option>
+                <option value="ULTRA">ULTRA</option>
+                <option value="HIGH">HIGH</option>
+                <option value="BALANCED">BALANCED</option>
+                <option value="PERFORMANCE">PERFORMANCE (MAX FPS)</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="settings-quick-actions">
+            <button class="settings-act-btn" id="btn-regen-map" onclick="window.regenerateDynamicSectorMap && window.regenerateDynamicSectorMap(); window.toggleHudSettingsModal && window.toggleHudSettingsModal();">
+              ⟳ REGENERATE MAP
+            </button>
+            <button class="settings-act-btn" id="hud-music-btn" onclick="window.RAID_MUSIC && window.RAID_MUSIC.toggleMusic()">
+              🎸 IRON: ON
+            </button>
+            <button class="settings-act-btn" id="modal-music-track-btn" onclick="window.RAID_MUSIC && window.RAID_MUSIC.nextTrack()">
+              🎸 NEXT TRACK
+            </button>
+            <button class="settings-act-btn" id="btn-weather-cycle" onclick="window.WEATHER_SYSTEM && window.WEATHER_SYSTEM.cycleNext()">
+              <span id="ui-weather-dot" class="weather-status-dot" style="display:inline-block;margin-right:4px;"></span>
+              <span id="ui-weather-label">CLEAR WEATHER</span>
+            </button>
+            <button class="settings-act-btn" id="btn-solaris-stance" onclick="window.toggleSolarisDiplomacy && window.toggleSolarisDiplomacy()">
+              ❖ SYNOD: ALLIED
+            </button>
+            <button class="settings-act-btn" id="btn-toggle-ai-ally" onclick="window.toggleAiAllyMode && window.toggleAiAllyMode()">
+              🤖 ALLY AI: DEFENSIVE
+            </button>
+            <button class="settings-act-btn" id="btn-squad-intel" onclick="window.toggleSquadIntelligence && window.toggleSquadIntelligence()">
+              🧠 SQUAD AI: DEFENSIVE
+            </button>
+            <button class="settings-act-btn" id="btn-toggle-endless" onclick="switchToEndlessMode(); window.toggleHudSettingsModal && window.toggleHudSettingsModal();">
+              ❖ ENDLESS MODE
+            </button>
+            <button class="settings-act-btn warn" id="btn-toggle-all-ui" onclick="window.toggleAllGameUI && window.toggleAllGameUI(); window.toggleHudSettingsModal && window.toggleHudSettingsModal();">
+              👁 HIDE ALL UI
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mission Victory Modal -->
+      <div id="victory-modal">
+        <h2>ZERG HIVE CLUSTER ANNIHILATED</h2>
+        <p>The Leviathan Citadel, Spawning Pool, and Bio-Factory have been destroyed! Enter <b>ENDLESS SURVIVAL MODE</b> where each wave mutates enemy strength.</p>
+        <div class="modal-actions">
+          <button class="action-btn" onclick="switchToEndlessMode()">Enter Endless Mode</button>
+          <button class="action-btn secondary" onclick="location.reload()">Replay Mission</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="root"></div>
+
+    <script src="/textures-scene.js?v=20261102c"></script>
+    <script src="/terrain-fow.js?v=20261102c"></script>
+    <script src="/models-fx.js?v=20261102c"></script>
+    <script src="/perf_optimizer.js?v=20261102c"></script>
+    <script src="/game.js?v=20261102c"></script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

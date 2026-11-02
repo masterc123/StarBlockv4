@@ -1,0 +1,8 @@
+{
+  "name": "1111 Remix Remix Remix Remix Remix Remix Remix OUTPOST // SECTOR-09 — Tactical RTS Command",
+  "description": "3D real-time tactical base-building and siege defense game with procedural canyon terrain, fog of war, modular turrets, and combined-arms combat.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
