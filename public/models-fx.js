@@ -4395,10 +4395,14 @@ function spawnEnemyBuildingBreakAnimation(ebPos, role = 'spawning_pool') {
     for (let p = 0; p < poolCount; p++) {
         const pa = (p / poolCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
         const pr = p === 0 ? 0 : (1.1 + Math.random() * (isCitadel ? 1.8 : 1.1));
+        const px = (ebPos && Number.isFinite(ebPos.x) ? ebPos.x : 0) + Math.cos(pa) * pr;
+        const pz = (ebPos && Number.isFinite(ebPos.z) ? ebPos.z : 0) + Math.sin(pa) * pr;
+        const py = typeof getTerrainHeight === 'function' ? getTerrainHeight(px, pz) : 0;
         spawnDynamicLiquidGoreDecal(
-            ebPos.x + Math.cos(pa) * pr,
-            ebPos.z + Math.sin(pa) * pr,
-            true,
+            new THREE.Vector3(px, Number.isFinite(py) ? py : 0, pz),
+            SHARED_FX_MAT.splatXenoViolet || SHARED_FX_MAT.splatXenoGreen,
+            isCitadel ? 'big' : 'small',
+            null,
             (isCitadel ? 2.4 : 1.7) - p * 0.22
         );
     }
@@ -9735,6 +9739,7 @@ function updateUnitAnimation(mesh, dt, isMoving, aimTargetPos = null) {
     const frameCounter = (window.PERF_MANAGER && window.PERF_MANAGER.frameCounter) || 0;
     let lodTier = 0;
     let distSqToCam = 0;
+    const isCinematicMode = !!(window.titleScreenActive || window.loadingCameraSweep);
     if (typeof camera !== 'undefined' && camera) {
         const dx = mesh.position.x - camera.position.x;
         const dy = mesh.position.y - camera.position.y;
@@ -9743,7 +9748,9 @@ function updateUnitAnimation(mesh, dt, isMoving, aimTargetPos = null) {
         const closeSq = perf ? perf.animCloseDistSq : 2600;
         const normSq = perf ? perf.animNormalDistSq : 6800;
         const farSq = perf ? perf.animFarDistSq : 15500;
-        if (distSqToCam > farSq) {
+        if (isCinematicMode) {
+            lodTier = distSqToCam > normSq ? 1 : 0;
+        } else if (distSqToCam > farSq) {
             lodTier = 3;
         } else if (distSqToCam > normSq) {
             lodTier = 2;
@@ -9751,7 +9758,7 @@ function updateUnitAnimation(mesh, dt, isMoving, aimTargetPos = null) {
             lodTier = 1;
         }
     }
-    if (lodTier < 3 && typeof window.isWorldPosInViewport === 'function') {
+    if (!isCinematicMode && lodTier < 3 && typeof window.isWorldPosInViewport === 'function') {
         if (!window.isWorldPosInViewport(mesh.position.x, mesh.position.y + 0.8, mesh.position.z, 4.2)) {
             lodTier = 3;
         }
@@ -11472,39 +11479,66 @@ const crashingHelis = [];
 const expandingGoreDecals = [];
 
 // Helper to spawn a dynamically generated 3D organic viscoelastic goo/blood pool with outward satellite droplets (Zero flat square planes!)
-function spawnDynamicLiquidGoreDecal(pos, mat, sizeCategory = 'small', impulseVec = null) {
-    const hy = getTerrainHeight(pos.x, pos.z);
-    if (hy <= -1.0) return null;
+// Supports both (posVec, mat, sizeCategory, impulseVec, customTargetScale) and legacy (x, z, isZergBool, customTargetScale) signatures.
+function spawnDynamicLiquidGoreDecal(pos, mat, sizeCategory = 'small', impulseVec = null, customTargetScale = null) {
+    let px = NaN;
+    let pz = NaN;
+    let resolvedMat = mat;
+    let resolvedCategory = sizeCategory;
+    let resolvedImpulse = impulseVec;
+    let resolvedScale = customTargetScale;
 
-    const norm = getTerrainNormal(pos.x, pos.z);
-    const gooMat = (mat === SHARED_FX_MAT.splatCrimsonBlood)
+    if (typeof pos === 'number' && typeof mat === 'number') {
+        px = pos;
+        pz = mat;
+        const isZergPool = Boolean(sizeCategory);
+        resolvedMat = isZergPool
+            ? (SHARED_FX_MAT.splatXenoViolet || SHARED_FX_MAT.splatXenoGreen)
+            : SHARED_FX_MAT.splatCrimsonBlood;
+        resolvedScale = (typeof impulseVec === 'number' && Number.isFinite(impulseVec)) ? impulseVec : null;
+        resolvedCategory = (resolvedScale && resolvedScale > 1.8) ? 'big' : 'small';
+        resolvedImpulse = null;
+    } else if (pos && typeof pos === 'object') {
+        px = Number(pos.x);
+        pz = Number(pos.z);
+    }
+
+    if (!Number.isFinite(px) || !Number.isFinite(pz)) return null;
+    const hy = typeof getTerrainHeight === 'function' ? getTerrainHeight(px, pz) : 0;
+    if (!Number.isFinite(hy) || hy <= -1.0) return null;
+
+    const rawNorm = typeof getTerrainNormal === 'function' ? getTerrainNormal(px, pz) : null;
+    const norm = (rawNorm && Number.isFinite(rawNorm.x) && Number.isFinite(rawNorm.y) && Number.isFinite(rawNorm.z))
+        ? rawNorm
+        : new THREE.Vector3(0, 1, 0);
+    const gooMat = (resolvedMat === SHARED_FX_MAT.splatCrimsonBlood)
         ? MAT.crimsonBlood
-        : ((mat === SHARED_FX_MAT.splatXenoViolet) ? MAT.xenoIchorViolet : MAT.xenoIchorGreen);
+        : ((resolvedMat === SHARED_FX_MAT.splatXenoViolet) ? MAT.xenoIchorViolet : MAT.xenoIchorGreen);
     const mainGeo = createProceduralViscoelasticGooGeo(
-        sizeCategory === 'big' ? 0.36 : (sizeCategory === 'drop' ? 0.14 : 0.24),
+        resolvedCategory === 'big' ? 0.36 : (resolvedCategory === 'drop' ? 0.14 : 0.24),
         0.032,
-        sizeCategory === 'big' ? 0.44 : (sizeCategory === 'drop' ? 0.18 : 0.30),
+        resolvedCategory === 'big' ? 0.44 : (resolvedCategory === 'drop' ? 0.18 : 0.30),
         1
     );
 
     const splatGroup = new THREE.Group();
-    splatGroup.position.set(pos.x, hy + 0.025 + Math.random() * 0.008, pos.z);
+    splatGroup.position.set(px, hy + 0.025 + Math.random() * 0.008, pz);
     splatGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), norm);
 
     const innerPivot = new THREE.Group();
-    const angle = (impulseVec && (Math.abs(impulseVec.x) + Math.abs(impulseVec.z) > 0.05))
-        ? Math.atan2(impulseVec.x, impulseVec.z) + (Math.random() - 0.5) * 0.35
+    const angle = (resolvedImpulse && (Math.abs(resolvedImpulse.x) + Math.abs(resolvedImpulse.z) > 0.05))
+        ? Math.atan2(resolvedImpulse.x, resolvedImpulse.z) + (Math.random() - 0.5) * 0.35
         : Math.random() * Math.PI * 2;
     innerPivot.rotation.y = angle;
 
     const mainMesh = new THREE.Mesh(mainGeo, gooMat);
-    const stretchZ = (impulseVec ? 1.35 : 1.12) + Math.random() * 0.38;
+    const stretchZ = (resolvedImpulse ? 1.35 : 1.12) + Math.random() * 0.38;
     const stretchX = 0.78 + Math.random() * 0.32;
     mainMesh.scale.set(stretchX, 0.55, stretchZ);
     innerPivot.add(mainMesh);
 
-    const satCount = sizeCategory === 'big' ? 5 : (sizeCategory === 'small' ? 3 : 2);
-    const baseR = sizeCategory === 'big' ? 0.58 : (sizeCategory === 'small' ? 0.34 : 0.18);
+    const satCount = resolvedCategory === 'big' ? 5 : (resolvedCategory === 'small' ? 3 : 2);
+    const baseR = resolvedCategory === 'big' ? 0.58 : (resolvedCategory === 'small' ? 0.34 : 0.18);
     const satGeo = createProceduralViscoelasticGooGeo(0.11, 0.028, 0.15, 2);
     for (let s = 0; s < satCount; s++) {
         const satMesh = new THREE.Mesh(satGeo, gooMat);
@@ -11512,7 +11546,7 @@ function spawnDynamicLiquidGoreDecal(pos, mat, sizeCategory = 'small', impulseVe
         const satDist = baseR * (0.75 + Math.random() * 0.65);
         satMesh.position.set(Math.sin(satAng) * satDist * stretchX, 0.004, Math.cos(satAng) * satDist * stretchZ);
         satMesh.rotation.y = satAng;
-        const satScale = (sizeCategory === 'big' ? 0.72 : 0.48) * (0.65 + Math.random() * 0.55);
+        const satScale = (resolvedCategory === 'big' ? 0.72 : 0.48) * (0.65 + Math.random() * 0.55);
         satMesh.scale.set(satScale * 0.75, 0.5, satScale * 1.45);
         innerPivot.add(satMesh);
     }
@@ -11521,7 +11555,10 @@ function spawnDynamicLiquidGoreDecal(pos, mat, sizeCategory = 'small', impulseVe
     splatGroup.scale.setScalar(0.38);
     scene.add(splatGroup);
 
-    expandingGoreDecals.push({ group: splatGroup, targetScale: 0.85 + Math.random() * 0.25, age: 0 });
+    const finalTargetScale = (typeof resolvedScale === 'number' && Number.isFinite(resolvedScale) && resolvedScale > 0.2)
+        ? resolvedScale
+        : (0.85 + Math.random() * 0.25);
+    expandingGoreDecals.push({ group: splatGroup, targetScale: finalTargetScale, age: 0 });
     groundDecals.push(splatGroup);
     while (groundDecals.length > 48) {
         const old = groundDecals.shift();

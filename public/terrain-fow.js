@@ -1954,7 +1954,7 @@ function computeRawTerrainHeight(x, z) {
         }
     }
 
-    // Dynamic Bomb Hole Craters (Carved bowl depression + raised blast ejecta rim)
+    // Dynamic Bomb Hole Craters (Carved bowl depression + raised blast ejecta rim; never carve island resource craters below water)
     for (let i = 0; i < DYNAMIC_BOMB_CRATERS.length; i++) {
         const bc = DYNAMIC_BOMB_CRATERS[i];
         const d = Math.hypot(x - bc.x, z - bc.z);
@@ -1962,7 +1962,8 @@ function computeRawTerrainHeight(x, z) {
             if (d < bc.r * 0.85) {
                 const normD = d / (bc.r * 0.85);
                 const bowl = 0.5 + 0.5 * Math.cos(normD * Math.PI);
-                h = Math.max(-0.95, h - bc.depth * bowl);
+                const minFloor = typeof bc.minFloorY === 'number' ? bc.minFloorY : (h > 0.04 ? 0.06 : -0.95);
+                h = Math.max(minFloor, h - bc.depth * bowl);
             } else {
                 const rimT = (d - bc.r * 0.85) / (bc.r * 0.50);
                 h += Math.sin(rimT * Math.PI) * (bc.depth * 0.28);
@@ -5550,10 +5551,11 @@ function deformTerrainCrater(cx, cz, radius = 2.4, depth = 0.28, forceImmediate 
                     const normDist = dist / effR;
                     if (normDist < 0.84) {
                         const tBowl = normDist / 0.84;
-                        // Smooth concave bowl with subtle central compaction & natural floor roughness
+                        // Smooth concave bowl with subtle central compaction & natural floor roughness (keep dry land above water!)
                         const bowlProfile = Math.pow(Math.cos(tBowl * Math.PI * 0.5), 1.45);
                         const microRough = (Math.sin(vx * 3.1 + vz * 2.7 + seedPhase) * 0.5 + 0.5) * 0.04 * depth;
-                        nextY = Math.max(-1.65, curY - depth * bowlProfile * 0.95 + microRough);
+                        const minAllowedY = curY > 0.04 ? 0.06 : -1.65;
+                        nextY = Math.max(minAllowedY, curY - depth * bowlProfile * 0.95 + microRough);
                     } else if (normDist < 1.38) {
                         const rimT = (normDist - 0.84) / 0.54;
                         const rimLobe = Math.max(0, Math.sin(ang * 4.0 + seedPhase * 0.5) * 0.35 + 0.65);
@@ -6101,8 +6103,8 @@ function isWorldPosExplored(x, z) {
 }
 window.isPositionExploredByPlayer = isWorldPosExplored;
 
-let creepRadius = 0.0;
-let creepTargetRadius = 0.0;
+let creepRadius = 16.5;
+let creepTargetRadius = 24.0;
 let activeZergMainCreepMesh = null;
 const activeZergExpansionCreepMeshes = [];
 const creepTumors = [];
@@ -6115,36 +6117,35 @@ const _grassDummy = new THREE.Object3D();
 // Strictly ensures Zerg creep ONLY appears when a Zerg Main Base (Hive/Hatchery/Citadel) is actually built and alive,
 // and always anchors creep at the actual Zerg Main Base position (never on a Protoss or Terran base!).
 function getActiveZergCreepState() {
-    const isCinematicMode = Boolean(
-        (window.titleScreenActive || window.loadingCameraSweep) ||
-        (window.BATTLE_CINEMATIC && window.BATTLE_CINEMATIC.active && window.BATTLE_CINEMATIC.lifecycleState === 'ACTIVE')
+    const bc = window.BATTLE_CINEMATIC;
+    const isCinematicActive = Boolean(
+        bc && bc.active && bc.lifecycleState === 'ACTIVE' &&
+        bc.actors && Array.isArray(bc.actors.buildings) && bc.actors.buildings.length > 0
     );
 
-    if (isCinematicMode) {
-        const bc = window.BATTLE_CINEMATIC;
-        if (bc && bc.active && bc.actors && Array.isArray(bc.actors.buildings)) {
-            const zergMainBase = bc.actors.buildings.find(b =>
+    if (isCinematicActive) {
+        const zergMainBase = bc.actors.buildings.find(b =>
+            b && b.hp > 0 && b.faction === 'zerg' &&
+            (b.role === 'base' || b.role === 'citadel' || b.role === 'hatchery' || b.role === 'hive') &&
+            (b.buildProgress === undefined || b.buildProgress >= 0.99) &&
+            b.pos && Number.isFinite(b.pos.x) && Number.isFinite(b.pos.z)
+        );
+        if (zergMainBase) {
+            const zergTeamId = zergMainBase.teamId;
+            const builtZergBuildings = bc.actors.buildings.filter(b =>
                 b && b.hp > 0 && b.faction === 'zerg' &&
-                (b.role === 'base' || b.role === 'citadel' || b.role === 'hatchery' || b.role === 'hive') &&
+                (!zergTeamId || b.teamId === zergTeamId) &&
                 (b.buildProgress === undefined || b.buildProgress >= 0.99) &&
                 b.pos && Number.isFinite(b.pos.x) && Number.isFinite(b.pos.z)
             );
-            if (zergMainBase) {
-                const zergTeamId = zergMainBase.teamId;
-                const builtZergBuildings = bc.actors.buildings.filter(b =>
-                    b && b.hp > 0 && b.faction === 'zerg' &&
-                    (!zergTeamId || b.teamId === zergTeamId) &&
-                    (b.buildProgress === undefined || b.buildProgress >= 0.99) &&
-                    b.pos && Number.isFinite(b.pos.x) && Number.isFinite(b.pos.z)
-                );
-                return {
-                    hasBuiltZergMainBase: true,
-                    x: zergMainBase.pos.x,
-                    z: zergMainBase.pos.z,
-                    mainBase: zergMainBase,
-                    buildingsList: builtZergBuildings
-                };
-            }
+            if (creepRadius < 14.0) creepRadius = 18.5;
+            return {
+                hasBuiltZergMainBase: true,
+                x: zergMainBase.pos.x,
+                z: zergMainBase.pos.z,
+                mainBase: zergMainBase,
+                buildingsList: builtZergBuildings
+            };
         }
         return {
             hasBuiltZergMainBase: false,
@@ -6326,6 +6327,8 @@ function isPointOnZergCreep(x, z) {
     }
     return false;
 }
+window.isPointOnZergCreep = isPointOnZergCreep;
+window.gatherActiveZergStructureCreepNodes = gatherActiveZergStructureCreepNodes;
 
 let _lastSyncedCreepVertexRadius = -999;
 let _lastSyncedCreepCenterX = -999;
@@ -6440,7 +6443,25 @@ function updateZergCreepColors(radius, isReceding = false, forceFullSync = false
     const colorAttr = terrainGeo.attributes.color;
     if (colorAttr) {
         for (let i = 0; i < posAttr.count; i++) {
-            colorAttr.setXYZ(i, baseColors[i * 3], baseColors[i * 3 + 1], baseColors[i * 3 + 2]);
+            const vx = posAttr.getX(i);
+            const vz = posAttr.getZ(i);
+            const vy = posAttr.getY(i);
+            let r = baseColors[i * 3];
+            let g = baseColors[i * 3 + 1];
+            let b = baseColors[i * 3 + 2];
+            if (effRadius > 0.5 && vy > -0.25 && isPointOnZergCreep(vx, vz)) {
+                const dMain = Math.hypot(vx - cx, vz - cz);
+                const organicWave = 0.5 + 0.5 * Math.sin(vx * 0.43 + vz * 0.37) * Math.cos(vx * 0.29 - vz * 0.51);
+                const edgeFade = THREE.MathUtils.clamp((effRadius + 3.2 - dMain) / 4.5, 0.28, 1.0);
+                const blend = 0.72 * edgeFade;
+                const cr = 0.25 + organicWave * 0.17;
+                const cg = 0.055 + organicWave * 0.04;
+                const cb = 0.31 + organicWave * 0.16;
+                r = r * (1.0 - blend) + cr * blend;
+                g = g * (1.0 - blend) + cg * blend;
+                b = b * (1.0 - blend) + cb * blend;
+            }
+            colorAttr.setXYZ(i, r, g, b);
         }
         colorAttr.needsUpdate = true;
     }
@@ -10835,13 +10856,15 @@ function createMineGemCraterSite(rawX, rawZ, isEmptyCrater = false, craterIdx = 
     const spot = findNonOverlappingStructureSpot(rawX, rawZ, 3.8, 5.2, 2.2) || { x: rawX, z: rawZ };
     const x = spot.x, z = spot.z;
 
+    const preCraterY = getTerrainHeight(x, z);
+    const isOceanOrLowland = (ACTIVE_PLANET_BIOME === 'ocean') || preCraterY < 1.15;
     const craterRadius = 4.05;
-    const craterDepth = 0.92;
-    DYNAMIC_BOMB_CRATERS.push({ x, z, r: craterRadius, depth: craterDepth });
+    const craterDepth = isOceanOrLowland ? Math.min(0.32, Math.max(0.10, (preCraterY - 0.10) * 0.55)) : 0.92;
+    DYNAMIC_BOMB_CRATERS.push({ x, z, r: craterRadius, depth: craterDepth, minFloorY: 0.08 });
     deformTerrainCrater(x, z, craterRadius, craterDepth, true);
 
     const group = new THREE.Group();
-    const centerY = getTerrainHeight(x, z);
+    const centerY = Math.max(0.08, getTerrainHeight(x, z));
     group.position.set(x, centerY, z);
 
     const rimRockMat = new THREE.MeshStandardMaterial({ color: 0x322b40, roughness: 0.84, metalness: 0.24 });
@@ -12408,7 +12431,7 @@ function getSharedNavalAssetCache() {
     return NAVAL_ASSET_CACHE;
 }
 
-function createProceduralNavalVesselGroup(vesselType, cache) {
+function createProceduralNavalVesselGroup(vesselType, cache, factionOverride = null) {
     const ship = new THREE.Group();
     ship.name = `naval_${vesselType}`;
     const isWreck = vesselType === 'wrecked_ship' || vesselType === 'wrecked_military_vessel';
@@ -12416,123 +12439,239 @@ function createProceduralNavalVesselGroup(vesselType, cache) {
     const isCommand = vesselType === 'abandoned_command_ship';
     const isWarship = vesselType === 'military_warship' || isCommand || vesselType === 'wrecked_military_vessel';
     const isTransport = vesselType === 'civilian_transport_ship';
+    const faction = factionOverride || (vesselType.includes('zerg') ? 'zerg' : (vesselType.includes('protoss') || vesselType.includes('solaris') ? 'solaris' : 'terran'));
+    ship.userData.faction = faction;
+    ship.userData.vesselType = vesselType;
 
-    const len = isCarrier ? 17.5 : (isCommand ? 13.5 : (isWarship ? 11.8 : (isTransport ? 10.6 : 8.2)));
-    const beam = isCarrier ? 4.8 : (isCommand ? 3.5 : (isWarship ? 2.8 : (isTransport ? 2.9 : 2.3)));
-    const draftH = isCarrier ? 1.85 : (isWarship ? 1.35 : 1.15);
+    const len = isCarrier ? 18.2 : (isCommand ? 14.2 : (isWarship ? 12.4 : (isTransport ? 11.0 : 8.8)));
+    const beam = isCarrier ? 5.0 : (isCommand ? 3.7 : (isWarship ? 3.0 : (isTransport ? 3.1 : 2.5)));
+    const draftH = isCarrier ? 1.90 : (isWarship ? 1.42 : 1.20);
 
+    if (faction === 'zerg') {
+        // Zerg Leviathan / Chitinous Bio-Cruiser Naval Vessel
+        const carapaceMat = (typeof MAT !== 'undefined' && MAT.zergCarapace) ? MAT.zergCarapace : cache.rustWeathered;
+        const fleshMat = (typeof MAT !== 'undefined' && MAT.zergFlesh) ? MAT.zergFlesh : cache.hullDark;
+        const bioGlowMat = (typeof MAT !== 'undefined' && MAT.zergBioShader) ? MAT.zergBioShader : cache.hazardBeacon;
+
+        const bioHull = new THREE.Mesh(createOrganicBioCarapaceGeo(beam * 0.58, draftH * 0.92, len * 0.52, 6, 0.08), carapaceMat);
+        bioHull.position.y = draftH * 0.44;
+        bioHull.castShadow = !IS_MOBILE;
+        bioHull.receiveShadow = true;
+        ship.add(bioHull);
+
+        const mandibleL = new THREE.Mesh(cache.coneUnitGeo, carapaceMat);
+        mandibleL.scale.set(beam * 0.22, len * 0.28, draftH * 0.45);
+        mandibleL.rotation.x = Math.PI * 0.48;
+        mandibleL.rotation.z = -0.18;
+        mandibleL.position.set(-beam * 0.28, draftH * 0.35, len * 0.52);
+        const mandibleR = mandibleL.clone();
+        mandibleR.rotation.z = 0.18;
+        mandibleR.position.x = beam * 0.28;
+        ship.add(mandibleL, mandibleR);
+
+        // Dorsal bio-plasma spines & pulsing spore sacs
+        for (let s = -2; s <= 2; s++) {
+            const spine = new THREE.Mesh(cache.coneUnitGeo, fleshMat);
+            spine.scale.set(0.28, 1.45 - Math.abs(s) * 0.18, 0.36);
+            spine.rotation.x = -0.28;
+            spine.position.set(0, draftH + 0.45, s * (len * 0.14));
+            ship.add(spine);
+
+            const sac = new THREE.Mesh(cache.domeUnitGeo, bioGlowMat);
+            sac.scale.set(0.34, 0.26, 0.34);
+            sac.position.set((s % 2 === 0 ? 1 : -1) * beam * 0.38, draftH * 0.72, s * (len * 0.13));
+            ship.add(sac);
+        }
+        return ship;
+    }
+
+    if (faction === 'solaris' || faction === 'protoss') {
+        // Protoss Golden Armada Naval Trimaran / Psi-Cruiser
+        const goldMat = (typeof MAT !== 'undefined' && MAT.protossGold) ? MAT.protossGold : cache.radarMat;
+        const crystalMat = (typeof MAT !== 'undefined' && MAT.protossCrystal) ? MAT.protossCrystal : cache.navGlow;
+
+        const centerHull = new THREE.Mesh(cache.coneUnitGeo, goldMat);
+        centerHull.scale.set(beam * 0.52, len * 0.96, draftH * 0.88);
+        centerHull.rotation.x = Math.PI * 0.5;
+        centerHull.position.set(0, draftH * 0.45, 0);
+        ship.add(centerHull);
+
+        for (let side of [-1, 1]) {
+            const outrigger = new THREE.Mesh(cache.coneUnitGeo, goldMat);
+            outrigger.scale.set(beam * 0.22, len * 0.68, draftH * 0.56);
+            outrigger.rotation.x = Math.PI * 0.5;
+            outrigger.position.set(side * beam * 0.64, draftH * 0.34, -len * 0.06);
+            ship.add(outrigger);
+        }
+
+        const psiCore = new THREE.Mesh(cache.domeUnitGeo, crystalMat);
+        psiCore.scale.set(0.72, 1.15, 0.72);
+        psiCore.position.set(0, draftH + 0.85, 0.4);
+        ship.add(psiCore);
+        ship.userData.radarSpinner = psiCore;
+        return ship;
+    }
+
+    // Terran Dominion Multi-Part Armored Naval Vessel (Sculpted Bow, Chine Hull, Superstructure, Rotating Turrets & Propulsion Nozzles)
     const hullMat = isWreck ? cache.rustWeathered : (isTransport ? cache.hullDark : cache.hullSteel);
     const mainHull = new THREE.Mesh(cache.boxUnitGeo, hullMat);
-    mainHull.scale.set(beam, draftH, len * 0.76);
-    mainHull.position.y = draftH * 0.36;
+    mainHull.scale.set(beam, draftH, len * 0.72);
+    mainHull.position.y = draftH * 0.38;
     mainHull.castShadow = !IS_MOBILE;
     mainHull.receiveShadow = true;
     ship.add(mainHull);
 
-    // Tapered bow & stern wedges
+    // Sloped Armored Upper Freeboard Casemate
+    const casemate = new THREE.Mesh(cache.boxUnitGeo, cache.deckGray);
+    casemate.scale.set(beam * 0.88, draftH * 0.42, len * 0.68);
+    casemate.position.set(0, draftH * 0.78, 0.15);
+    ship.add(casemate);
+
+    // Sharp hydrodynamic clipper bow + bulbous forefoot + forward breakwater
     const bow = new THREE.Mesh(cache.coneUnitGeo, hullMat);
-    bow.scale.set(beam * 0.66, len * 0.24, draftH * 0.92);
+    bow.scale.set(beam * 0.68, len * 0.28, draftH * 0.94);
     bow.rotation.x = Math.PI * 0.5;
-    bow.position.set(0, draftH * 0.36, len * 0.48);
+    bow.position.set(0, draftH * 0.40, len * 0.48);
     ship.add(bow);
 
+    const bulbBow = new THREE.Mesh(cache.cylUnitGeo, cache.rustWeathered);
+    bulbBow.scale.set(beam * 0.24, len * 0.16, draftH * 0.34);
+    bulbBow.rotation.x = Math.PI * 0.5;
+    bulbBow.position.set(0, 0.12, len * 0.54);
+    ship.add(bulbBow);
+
+    // Armored Stern Transom & Dual Hydro-Jet Thruster Nozzles
     const stern = new THREE.Mesh(cache.boxUnitGeo, cache.hullDark);
-    stern.scale.set(beam * 0.88, draftH * 0.90, len * 0.14);
-    stern.position.set(0, draftH * 0.34, -len * 0.42);
+    stern.scale.set(beam * 0.90, draftH * 0.92, len * 0.15);
+    stern.position.set(0, draftH * 0.36, -len * 0.42);
     ship.add(stern);
 
-    // Weathering waterline rust belt
+    for (let side of [-1, 1]) {
+        const nozzle = new THREE.Mesh(cache.cylUnitGeo, cache.hullDark);
+        nozzle.scale.set(0.28, 0.52, 0.28);
+        nozzle.rotation.x = Math.PI * 0.5;
+        nozzle.position.set(side * beam * 0.26, 0.26, -len * 0.50);
+        ship.add(nozzle);
+
+        if (!isWreck) {
+            const thrusterGlow = new THREE.Mesh(cache.domeUnitGeo, cache.navGlow);
+            thrusterGlow.scale.set(0.20, 0.20, 0.12);
+            thrusterGlow.position.set(side * beam * 0.26, 0.26, -len * 0.53);
+            ship.add(thrusterGlow);
+        }
+    }
+
+    // Weathering waterline anti-fouling belt
     const belt = new THREE.Mesh(cache.boxUnitGeo, cache.rustWeathered);
-    belt.scale.set(beam * 1.02, 0.24, len * 0.78);
+    belt.scale.set(beam * 1.03, 0.24, len * 0.76);
     belt.position.y = 0.08;
     ship.add(belt);
 
     if (isCarrier) {
-        // Angled flight deck, arrestor strips, island superstructure & parked deck interceptors
+        // Angled flight deck, arrestor strips, sponson deck overhangs, island superstructure & parked deck interceptors
         const flightDeck = new THREE.Mesh(cache.boxUnitGeo, cache.flightDeck);
-        flightDeck.scale.set(beam * 1.38, 0.26, len * 0.98);
-        flightDeck.position.set(0, draftH * 0.82, 0.2);
+        flightDeck.scale.set(beam * 1.44, 0.28, len * 0.98);
+        flightDeck.position.set(0, draftH * 0.88, 0.2);
         ship.add(flightDeck);
 
         const stripe = new THREE.Mesh(cache.boxUnitGeo, cache.radarMat);
         stripe.scale.set(0.22, 0.04, len * 0.88);
-        stripe.position.set(-0.35, draftH * 0.96, 0.2);
+        stripe.position.set(-0.35, draftH * 1.03, 0.2);
         stripe.rotation.y = 0.06;
         ship.add(stripe);
 
         const island = new THREE.Mesh(cache.boxUnitGeo, cache.hullSteel);
-        island.scale.set(1.15, 2.1, 3.2);
-        island.position.set(beam * 0.48, draftH + 0.95, -1.2);
+        island.scale.set(1.22, 2.25, 3.4);
+        island.position.set(beam * 0.50, draftH + 1.05, -1.2);
         ship.add(island);
 
+        const bridgeVisor = new THREE.Mesh(cache.boxUnitGeo, cache.navGlow);
+        bridgeVisor.scale.set(0.95, 0.24, 0.18);
+        bridgeVisor.position.set(beam * 0.50, draftH + 1.65, 0.52);
+        ship.add(bridgeVisor);
+
         const mast = new THREE.Mesh(cache.cylUnitGeo, cache.radarMat);
-        mast.scale.set(0.12, 1.8, 0.12);
-        mast.position.set(beam * 0.48, draftH + 2.5, -1.2);
+        mast.scale.set(0.14, 1.9, 0.14);
+        mast.position.set(beam * 0.50, draftH + 2.65, -1.2);
         ship.add(mast);
 
         const radarDish = new THREE.Mesh(cache.boxUnitGeo, cache.radarMat);
-        radarDish.scale.set(0.95, 0.32, 0.12);
-        radarDish.position.set(beam * 0.48, draftH + 3.25, -1.2);
+        radarDish.scale.set(1.05, 0.34, 0.14);
+        radarDish.position.set(beam * 0.50, draftH + 3.45, -1.2);
         ship.add(radarDish);
         ship.userData.radarSpinner = radarDish;
 
         const beacon = new THREE.Mesh(cache.domeUnitGeo, cache.navGlow);
-        beacon.scale.setScalar(0.18);
-        beacon.position.set(beam * 0.48, draftH + 3.55, -1.2);
+        beacon.scale.setScalar(0.20);
+        beacon.position.set(beam * 0.50, draftH + 3.75, -1.2);
         ship.add(beacon);
     } else if (isTransport) {
-        // Civilian container transport ship with stacked cargo containers & aft bridge house
+        // Armored Logistics Transport with aft bridge citadel, crane boom & modular cargo pods
         const bridge = new THREE.Mesh(cache.boxUnitGeo, cache.hullSteel);
-        bridge.scale.set(beam * 0.82, 1.85, 2.1);
-        bridge.position.set(0, draftH + 0.75, -len * 0.28);
+        bridge.scale.set(beam * 0.84, 1.95, 2.25);
+        bridge.position.set(0, draftH + 0.82, -len * 0.28);
         ship.add(bridge);
+
+        const bridgeWindow = new THREE.Mesh(cache.boxUnitGeo, cache.navGlow);
+        bridgeWindow.scale.set(beam * 0.68, 0.22, 0.12);
+        bridgeWindow.position.set(0, draftH + 1.42, -len * 0.28 + 1.14);
+        ship.add(bridgeWindow);
 
         for (let c = 0; c < 3; c++) {
             const crate = new THREE.Mesh(cache.boxUnitGeo, c % 2 === 0 ? cache.cargoOrange : cache.cargoBlue);
-            crate.scale.set(beam * 0.76, 0.92, 1.85);
-            crate.position.set(0, draftH + 0.32, -0.5 + c * 2.15);
+            crate.scale.set(beam * 0.76, 0.96, 1.88);
+            crate.position.set(0, draftH + 0.42, -0.4 + c * 2.18);
             ship.add(crate);
         }
     } else {
-        // Military warship / command vessel / support vessel with superstructure, naval turrets & comms tower
+        // Guided-Missile Destroyer / Command Cruiser with tiered bridge, VLS cells, comms mast & dual railgun turrets
         const superStruct = new THREE.Mesh(cache.boxUnitGeo, cache.deckGray);
-        superStruct.scale.set(beam * 0.72, isCommand ? 2.25 : 1.65, len * 0.36);
-        superStruct.position.set(0, draftH + 0.65, -0.4);
+        superStruct.scale.set(beam * 0.74, isCommand ? 2.35 : 1.75, len * 0.38);
+        superStruct.position.set(0, draftH + 0.72, -0.35);
         ship.add(superStruct);
 
+        const commandBridge = new THREE.Mesh(cache.boxUnitGeo, cache.hullSteel);
+        commandBridge.scale.set(beam * 0.56, 0.85, len * 0.20);
+        commandBridge.position.set(0, draftH + (isCommand ? 2.05 : 1.65), 0.15);
+        ship.add(commandBridge);
+
+        const visor = new THREE.Mesh(cache.boxUnitGeo, cache.navGlow);
+        visor.scale.set(beam * 0.48, 0.18, 0.10);
+        visor.position.set(0, draftH + (isCommand ? 2.15 : 1.75), 0.15 + len * 0.10);
+        ship.add(visor);
+
         const commTower = new THREE.Mesh(cache.cylUnitGeo, cache.hullDark);
-        commTower.scale.set(0.24, isCommand ? 2.4 : 1.7, 0.24);
-        commTower.position.set(0, draftH + (isCommand ? 2.1 : 1.65), -0.6);
+        commTower.scale.set(0.24, isCommand ? 2.5 : 1.85, 0.24);
+        commTower.position.set(0, draftH + (isCommand ? 2.35 : 1.85), -0.65);
         ship.add(commTower);
 
         const radarBar = new THREE.Mesh(cache.boxUnitGeo, cache.radarMat);
-        radarBar.scale.set(0.85, 0.22, 0.12);
-        radarBar.position.set(0, draftH + (isCommand ? 3.2 : 2.55), -0.6);
+        radarBar.scale.set(0.95, 0.24, 0.14);
+        radarBar.position.set(0, draftH + (isCommand ? 3.45 : 2.75), -0.65);
         ship.add(radarBar);
         ship.userData.radarSpinner = radarBar;
 
-        // Forward and aft naval gun turrets
+        // Forward and aft dual-barrel naval railgun turrets
         const buildTurret = (zOff, rotY = 0) => {
             const tur = new THREE.Group();
-            tur.position.set(0, draftH * 0.82, zOff);
+            tur.position.set(0, draftH * 0.95, zOff);
             tur.rotation.y = rotY;
             const cup = new THREE.Mesh(cache.domeUnitGeo, cache.hullSteel);
-            cup.scale.set(0.65, 0.42, 0.78);
+            cup.scale.set(0.72, 0.46, 0.86);
             const barrelL = new THREE.Mesh(cache.cylUnitGeo, cache.hullDark);
-            barrelL.scale.set(0.07, 1.35, 0.07);
+            barrelL.scale.set(0.08, 1.48, 0.08);
             barrelL.rotation.x = Math.PI * 0.5;
-            barrelL.position.set(-0.14, 0.18, 0.72);
+            barrelL.position.set(-0.16, 0.20, 0.78);
             const barrelR = barrelL.clone();
-            barrelR.position.x = 0.14;
+            barrelR.position.x = 0.16;
             tur.add(cup, barrelL, barrelR);
             ship.add(tur);
         };
-        buildTurret(len * 0.27, 0);
-        if (isWarship) buildTurret(-len * 0.28, Math.PI);
+        buildTurret(len * 0.28, 0);
+        if (isWarship) buildTurret(-len * 0.29, Math.PI);
     }
 
     if (isWreck || isCommand) {
-        // Damaged hull breach, tilted deck & rising smoke plume
         ship.rotation.z = (isWreck ? 0.24 : 0.08) * (seededRandom() > 0.5 ? 1 : -1);
         ship.rotation.x = isWreck ? -0.11 : 0.03;
         const smokeGroup = new THREE.Group();
@@ -12549,77 +12688,135 @@ function createProceduralNavalVesselGroup(vesselType, cache) {
 
     return ship;
 }
+window.createProceduralNavalVesselGroup = createProceduralNavalVesselGroup;
 
 function createProceduralNavalInstallationGroup(installType, cache) {
     const inst = new THREE.Group();
     inst.name = `naval_install_${installType}`;
+    inst.userData.installType = installType;
     if (installType === 'coastal_radar_installation' || installType === 'naval_military_installation') {
         const plinth = new THREE.Mesh(cache.cylUnitGeo, cache.hullDark);
-        plinth.scale.set(2.8, 0.65, 2.8);
-        plinth.position.y = 0.32;
+        plinth.scale.set(2.9, 0.72, 2.9);
+        plinth.position.y = 0.36;
         inst.add(plinth);
 
         const bunker = new THREE.Mesh(cache.boxUnitGeo, cache.hullSteel);
-        bunker.scale.set(3.4, 1.65, 2.8);
-        bunker.position.y = 1.15;
+        bunker.scale.set(3.5, 1.75, 2.9);
+        bunker.position.y = 1.22;
         inst.add(bunker);
 
+        const visor = new THREE.Mesh(cache.boxUnitGeo, cache.navGlow);
+        visor.scale.set(2.2, 0.22, 0.12);
+        visor.position.set(0, 1.55, 1.48);
+        inst.add(visor);
+
         const mast = new THREE.Mesh(cache.cylUnitGeo, cache.deckGray);
-        mast.scale.set(0.28, 3.6, 0.28);
-        mast.position.set(0.65, 2.6, 0);
+        mast.scale.set(0.28, 3.7, 0.28);
+        mast.position.set(0.65, 2.7, 0);
         inst.add(mast);
 
         const dish = new THREE.Mesh(cache.coneUnitGeo, cache.radarMat);
-        dish.scale.set(1.05, 0.55, 1.05);
+        dish.scale.set(1.12, 0.58, 1.12);
         dish.rotation.x = Math.PI * 0.38;
-        dish.position.set(0.65, 4.45, 0.22);
+        dish.position.set(0.65, 4.55, 0.22);
         inst.add(dish);
         inst.userData.radarSpinner = dish;
 
         const beacon = new THREE.Mesh(cache.domeUnitGeo, cache.navGlow);
-        beacon.scale.setScalar(0.22);
-        beacon.position.set(0.65, 4.85, 0);
+        beacon.scale.setScalar(0.24);
+        beacon.position.set(0.65, 4.95, 0);
         inst.add(beacon);
-    } else {
-        // Offshore Naval Defense Platform / Abandoned Offshore Military Installation on Pylons
-        for (let px of [-1.8, 1.8]) {
-            for (let pz of [-1.8, 1.8]) {
-                const leg = new THREE.Mesh(cache.cylUnitGeo, cache.rustWeathered);
-                leg.scale.set(0.28, 2.8, 0.28);
-                leg.position.set(px, 0.65, pz);
+    } else if (installType === 'offshore_military_installation' || installType === 'offshore_resource_station') {
+        // Deep-Water Offshore Resource & Logistics Rig with 4 Pylon Legs, Helipad, Extraction Derrick & Glowing Conduit
+        for (let px of [-2.1, 2.1]) {
+            for (let pz of [-2.1, 2.1]) {
+                const leg = new THREE.Mesh(cache.cylUnitGeo, cache.hullDark);
+                leg.scale.set(0.34, 3.2, 0.34);
+                leg.position.set(px, 0.75, pz);
                 inst.add(leg);
             }
         }
         const deck = new THREE.Mesh(cache.boxUnitGeo, cache.deckGray);
-        deck.scale.set(4.8, 0.55, 4.8);
-        deck.position.y = 1.95;
+        deck.scale.set(5.4, 0.62, 5.4);
+        deck.position.y = 2.05;
         inst.add(deck);
 
+        // Gantry crane & central drill/extraction spire
+        const derrick = new THREE.Mesh(cache.coneUnitGeo, cache.hullSteel);
+        derrick.scale.set(1.25, 3.4, 1.25);
+        derrick.position.set(0, 3.85, 0);
+        inst.add(derrick);
+
+        const corePipe = new THREE.Mesh(cache.cylUnitGeo, cache.navGlow);
+        corePipe.scale.set(0.26, 3.6, 0.26);
+        corePipe.position.set(0, 1.9, 0);
+        inst.add(corePipe);
+
+        for (let side of [-1.45, 1.45]) {
+            const tank = new THREE.Mesh(cache.cylUnitGeo, cache.cargoOrange);
+            tank.scale.set(0.62, 1.45, 0.62);
+            tank.position.set(side, 2.95, -1.2);
+            inst.add(tank);
+        }
+
+        const radarTop = new THREE.Mesh(cache.boxUnitGeo, cache.radarMat);
+        radarTop.scale.set(0.95, 0.22, 0.16);
+        radarTop.position.set(0, 5.65, 0);
+        inst.add(radarTop);
+        inst.userData.radarSpinner = radarTop;
+    } else {
+        // Offshore Naval Defense Platform & Shipyard Berth on Heavy Pylons
+        for (let px of [-1.9, 1.9]) {
+            for (let pz of [-1.9, 1.9]) {
+                const leg = new THREE.Mesh(cache.cylUnitGeo, cache.rustWeathered);
+                leg.scale.set(0.32, 2.9, 0.32);
+                leg.position.set(px, 0.68, pz);
+                inst.add(leg);
+            }
+        }
+        const deck = new THREE.Mesh(cache.boxUnitGeo, cache.deckGray);
+        deck.scale.set(5.0, 0.58, 5.0);
+        deck.position.y = 1.98;
+        inst.add(deck);
+
+        // Shipyard Gantry Arch
+        for (let gx of [-2.1, 2.1]) {
+            const pillar = new THREE.Mesh(cache.boxUnitGeo, cache.hullSteel);
+            pillar.scale.set(0.28, 2.1, 0.28);
+            pillar.position.set(gx, 3.1, -1.6);
+            inst.add(pillar);
+        }
+        const gantryBeam = new THREE.Mesh(cache.boxUnitGeo, cache.cargoOrange);
+        gantryBeam.scale.set(4.5, 0.28, 0.36);
+        gantryBeam.position.set(0, 4.15, -1.6);
+        inst.add(gantryBeam);
+
         const turretBase = new THREE.Mesh(cache.cylUnitGeo, cache.hullSteel);
-        turretBase.scale.set(1.35, 1.1, 1.35);
-        turretBase.position.y = 2.65;
+        turretBase.scale.set(1.42, 1.15, 1.42);
+        turretBase.position.y = 2.70;
         inst.add(turretBase);
 
         const dome = new THREE.Mesh(cache.domeUnitGeo, cache.hullDark);
-        dome.scale.set(1.15, 0.75, 1.15);
-        dome.position.y = 3.25;
+        dome.scale.set(1.22, 0.80, 1.22);
+        dome.position.y = 3.30;
         inst.add(dome);
 
         const cannonL = new THREE.Mesh(cache.cylUnitGeo, cache.radarMat);
-        cannonL.scale.set(0.10, 1.85, 0.10);
+        cannonL.scale.set(0.11, 1.95, 0.11);
         cannonL.rotation.x = Math.PI * 0.5;
-        cannonL.position.set(-0.28, 3.25, 1.15);
+        cannonL.position.set(-0.30, 3.30, 1.20);
         const cannonR = cannonL.clone();
-        cannonR.position.x = 0.28;
+        cannonR.position.x = 0.30;
         inst.add(cannonL, cannonR);
 
         const hazard = new THREE.Mesh(cache.domeUnitGeo, cache.hazardBeacon);
-        hazard.scale.setScalar(0.24);
-        hazard.position.set(-1.6, 2.45, -1.6);
+        hazard.scale.setScalar(0.26);
+        hazard.position.set(-1.7, 2.50, -1.7);
         inst.add(hazard);
     }
     return inst;
 }
+window.createProceduralNavalInstallationGroup = createProceduralNavalInstallationGroup;
 
 function createOceanBiomeFeatures(isClearFn, biome = ACTIVE_PLANET_BIOME) {
     const activeBiome = biome || ACTIVE_PLANET_BIOME || 'ocean';
@@ -12634,27 +12831,27 @@ function createOceanBiomeFeatures(isClearFn, biome = ACTIVE_PLANET_BIOME) {
     // 1. Spawn Strategic Naval Vessels in Navigable Deep Water Channels (Outside Bridges & Island Shorelines)
     const fleetRoster = IS_MOBILE
         ? [
-            { type: 'aircraft_carrier', x: -56, z: 48, yaw: 0.42 },
-            { type: 'military_warship', x: 54, z: -46, yaw: -2.35 },
-            { type: 'abandoned_command_ship', x: -48, z: -52, yaw: 0.85 },
-            { type: 'civilian_transport_ship', x: 58, z: 44, yaw: -0.95 },
-            { type: 'naval_support_vessel', x: -64, z: -4, yaw: 1.45 },
-            { type: 'wrecked_ship', x: 64, z: 8, yaw: -1.15 },
-            { type: 'wrecked_military_vessel', x: 4, z: 62, yaw: 0.25 }
+            { type: 'aircraft_carrier', x: -56, z: 48, yaw: 0.42, faction: 'terran' },
+            { type: 'military_warship', x: 54, z: -46, yaw: -2.35, faction: 'zerg' },
+            { type: 'abandoned_command_ship', x: -48, z: -52, yaw: 0.85, faction: 'solaris' },
+            { type: 'civilian_transport_ship', x: 58, z: 44, yaw: -0.95, faction: 'terran' },
+            { type: 'naval_support_vessel', x: -64, z: -4, yaw: 1.45, faction: 'terran' },
+            { type: 'wrecked_ship', x: 64, z: 8, yaw: -1.15, faction: 'terran' },
+            { type: 'wrecked_military_vessel', x: 4, z: 62, yaw: 0.25, faction: 'terran' }
         ]
         : [
-            { type: 'aircraft_carrier', x: -58, z: 50, yaw: 0.42 },
-            { type: 'aircraft_carrier', x: 58, z: -50, yaw: -2.65 },
-            { type: 'abandoned_command_ship', x: -50, z: -54, yaw: 0.88 },
-            { type: 'military_warship', x: 54, z: 46, yaw: -1.10 },
-            { type: 'military_warship', x: -64, z: 6, yaw: 1.52 },
-            { type: 'civilian_transport_ship', x: 64, z: -6, yaw: -1.48 },
-            { type: 'civilian_transport_ship', x: -8, z: -64, yaw: 0.15 },
-            { type: 'naval_support_vessel', x: 12, z: 64, yaw: -2.95 },
-            { type: 'naval_support_vessel', x: -36, z: 60, yaw: 0.65 },
-            { type: 'wrecked_ship', x: 38, z: -60, yaw: -0.75 },
-            { type: 'wrecked_military_vessel', x: -62, z: -28, yaw: 1.15 },
-            { type: 'wrecked_ship', x: 62, z: 26, yaw: -1.85 }
+            { type: 'aircraft_carrier', x: -58, z: 50, yaw: 0.42, faction: 'terran' },
+            { type: 'aircraft_carrier', x: 58, z: -50, yaw: -2.65, faction: 'zerg' },
+            { type: 'abandoned_command_ship', x: -50, z: -54, yaw: 0.88, faction: 'solaris' },
+            { type: 'military_warship', x: 54, z: 46, yaw: -1.10, faction: 'terran' },
+            { type: 'military_warship', x: -64, z: 6, yaw: 1.52, faction: 'solaris' },
+            { type: 'civilian_transport_ship', x: 64, z: -6, yaw: -1.48, faction: 'terran' },
+            { type: 'civilian_transport_ship', x: -8, z: -64, yaw: 0.15, faction: 'terran' },
+            { type: 'naval_support_vessel', x: 12, z: 64, yaw: -2.95, faction: 'zerg' },
+            { type: 'naval_support_vessel', x: -36, z: 60, yaw: 0.65, faction: 'terran' },
+            { type: 'wrecked_ship', x: 38, z: -60, yaw: -0.75, faction: 'terran' },
+            { type: 'wrecked_military_vessel', x: -62, z: -28, yaw: 1.15, faction: 'terran' },
+            { type: 'wrecked_ship', x: 62, z: 26, yaw: -1.85, faction: 'terran' }
         ];
 
     fleetRoster.forEach((entry, idx) => {
@@ -12668,7 +12865,7 @@ function createOceanBiomeFeatures(isClearFn, biome = ACTIVE_PLANET_BIOME) {
         });
         if (!spot) return;
 
-        const vessel = createProceduralNavalVesselGroup(entry.type, cache);
+        const vessel = createProceduralNavalVesselGroup(entry.type, cache, entry.faction || 'terran');
         const isWreck = entry.type.includes('wrecked');
         const baseY = waterY + (isWreck ? -0.16 : 0.04);
         vessel.position.set(spot.x, baseY, spot.z);
@@ -12697,7 +12894,7 @@ function createOceanBiomeFeatures(isClearFn, biome = ACTIVE_PLANET_BIOME) {
         });
     });
 
-    // 2. Spawn Ocean Military Installations (Offshore Defense Platforms & Island Coastal Radar Installations)
+    // 2. Spawn Ocean Military Installations (Offshore Defense Platforms, Shipyards, Offshore Resource Stations & Coastal Radar)
     const offshoreSpots = IS_MOBILE
         ? [
             { type: 'naval_defense_platform', x: -28, z: 34 },
@@ -12724,6 +12921,13 @@ function createOceanBiomeFeatures(isClearFn, biome = ACTIVE_PLANET_BIOME) {
         plat.rotation.y = idx * 1.15;
         oceanGroup.add(plat);
         obstacles.push({ x: spot.x, z: spot.z, r: 3.4, type: 'naval_installation', structureId: os.type });
+        if (plat.userData.radarSpinner) {
+            animatedBiomeLandmarks.push({
+                type: 'satellite',
+                mesh: plat.userData.radarSpinner,
+                phase: idx * 1.1
+            });
+        }
     });
 
     if (Array.isArray(window.OCEAN_ISLANDS)) {
@@ -12997,7 +13201,8 @@ function populateDynamicWorldPropsAndLandmarks(explicitBiome) {
         }
     });
 
-    // 2. Mine Gems Craters (7 Craters dynamically distributed across the sector: 5 Rich Gem Craters & 2 Empty Craters)
+    // 2. Mine Gems Craters (7 Craters deterministically distributed across the sector: 5 Rich Gem Craters & 2 Empty Craters)
+    // Biome-aware resolver guarantees valid dry island/plateau placement on Ocean and all other biomes (never GemCraters=0!)
     const gemCraterCoords = [
         [PLAYER_START_POS.x + Math.cos(pBackAng + 1.15) * 25.0, PLAYER_START_POS.z + Math.sin(pBackAng + 1.15) * 25.0, false],
         [PLAYER_START_POS.x + Math.cos(pBackAng - 1.15) * 27.0, PLAYER_START_POS.z + Math.sin(pBackAng - 1.15) * 27.0, true],
@@ -13007,9 +13212,96 @@ function populateDynamicWorldPropsAndLandmarks(explicitBiome) {
         [ENEMY_BASE_POS.x + Math.cos(eBackAng + 1.25) * 28.0, ENEMY_BASE_POS.z + Math.sin(eBackAng + 1.25) * 28.0, false],
         [SOLARIS_BASE_POS.x + Math.cos(sBackAng - 1.25) * 26.0, SOLARIS_BASE_POS.z + Math.sin(sBackAng - 1.25) * 26.0, false]
     ];
+
+    const resolveDeterministicGemCraterSpot = (prefX, prefZ, gIdx) => {
+        const isNotTooCloseToOtherCraters = (cx, cz, minDist = 8.5) => {
+            if (Math.hypot(cx - PLAYER_START_POS.x, cz - PLAYER_START_POS.z) < 7.5) return false;
+            if (Math.hypot(cx - ENEMY_BASE_POS.x, cz - ENEMY_BASE_POS.z) < 7.5) return false;
+            if (Math.hypot(cx - SOLARIS_BASE_POS.x, cz - SOLARIS_BASE_POS.z) < 7.5) return false;
+            if (isSpotUnderOrBlockingBridge(cx, cz, 3.8)) return false;
+            for (let i = 0; i < GEM_CRATERS.length; i++) {
+                const gc = GEM_CRATERS[i];
+                if (gc && Math.hypot(cx - gc.x, cz - gc.z) < minDist) return false;
+            }
+            return true;
+        };
+
+        // Pass 1: Direct candidate check
+        const cX0 = THREE.MathUtils.clamp(prefX, -94, 94);
+        const cZ0 = THREE.MathUtils.clamp(prefZ, -94, 94);
+        if (isFootprintAboveWater(cX0, cZ0, 3.4, 8, 0.06) && isNotTooCloseToOtherCraters(cX0, cZ0, 8.5)) {
+            return { x: cX0, z: cZ0 };
+        }
+
+        // Pass 2: Search dry island / base plateau / archipelago anchors sorted by proximity to preferred coord
+        const anchors = [
+            { x: cX0, z: cZ0, maxR: 28 },
+            { x: PLAYER_START_POS.x, z: PLAYER_START_POS.z, maxR: 22 },
+            { x: ENEMY_BASE_POS.x, z: ENEMY_BASE_POS.z, maxR: 22 },
+            { x: SOLARIS_BASE_POS.x, z: SOLARIS_BASE_POS.z, maxR: 22 }
+        ];
+        if (Array.isArray(window.OCEAN_ISLANDS)) {
+            for (let i = 0; i < window.OCEAN_ISLANDS.length; i++) {
+                const isl = window.OCEAN_ISLANDS[i];
+                if (isl && Number.isFinite(isl.x) && Number.isFinite(isl.z)) {
+                    anchors.push({ x: isl.x, z: isl.z, maxR: Math.max(12, (isl.r || 14) + 3) });
+                }
+            }
+        }
+        if (Array.isArray(BASE_TERRAIN_ZONES)) {
+            for (let i = 0; i < BASE_TERRAIN_ZONES.length; i++) {
+                const bz = BASE_TERRAIN_ZONES[i];
+                if (bz && Number.isFinite(bz.x) && Number.isFinite(bz.z)) {
+                    anchors.push({ x: bz.x, z: bz.z, maxR: Math.max(15, (bz.radius || 16) + 2) });
+                }
+            }
+        }
+        anchors.sort((a, b) => Math.hypot(a.x - cX0, a.z - cZ0) - Math.hypot(b.x - cX0, b.z - cZ0));
+
+        for (let aIdx = 0; aIdx < anchors.length; aIdx++) {
+            const anc = anchors[aIdx];
+            for (let r = 8.5; r <= anc.maxR; r += 2.2) {
+                for (let step = 0; step < 16; step++) {
+                    const ang = ((step + gIdx * 3) / 16) * Math.PI * 2;
+                    const tx = THREE.MathUtils.clamp(anc.x + Math.cos(ang) * r, -94, 94);
+                    const tz = THREE.MathUtils.clamp(anc.z + Math.sin(ang) * r, -94, 94);
+                    if (isFootprintAboveWater(tx, tz, 2.2, 8, 0.04) && isNotTooCloseToOtherCraters(tx, tz, 7.8)) {
+                        return { x: tx, z: tz };
+                    }
+                }
+            }
+        }
+
+        // Pass 3: Relaxed dry island shelf check (footprintRadius = 1.2m above water)
+        for (let aIdx = 0; aIdx < anchors.length; aIdx++) {
+            const anc = anchors[aIdx];
+            for (let r = 7.8; r <= anc.maxR + 4; r += 2.0) {
+                for (let step = 0; step < 16; step++) {
+                    const ang = ((step + gIdx * 5) / 16) * Math.PI * 2;
+                    const tx = THREE.MathUtils.clamp(anc.x + Math.cos(ang) * r, -94, 94);
+                    const tz = THREE.MathUtils.clamp(anc.z + Math.sin(ang) * r, -94, 94);
+                    if (getTerrainHeight(tx, tz) > 0.04 && isNotTooCloseToOtherCraters(tx, tz, 6.8)) {
+                        return { x: tx, z: tz };
+                    }
+                }
+            }
+        }
+
+        // Pass 4: Controlled coastal platform elevation fallback so a valid above-water resource site is 100% guaranteed
+        const fallbackAnchor = anchors[(gIdx % Math.max(1, anchors.length))] || { x: PLAYER_START_POS.x, z: PLAYER_START_POS.z };
+        const fbAng = gIdx * 0.92 + 0.45;
+        const fbX = THREE.MathUtils.clamp(fallbackAnchor.x + Math.cos(fbAng) * 11.5, -90, 90);
+        const fbZ = THREE.MathUtils.clamp(fallbackAnchor.z + Math.sin(fbAng) * 11.5, -90, 90);
+        if (typeof flattenTerrainUnderBuilding === 'function') {
+            flattenTerrainUnderBuilding(fbX, fbZ, 4.4, 2.4);
+        }
+        return { x: fbX, z: fbZ };
+    };
+
     gemCraterCoords.forEach(([gx, gz, isEmpty], gIdx) => {
-        if (isFootprintAboveWater(gx, gz, 3.8, 8, 0.08)) {
-            createMineGemCraterSite(gx, gz, isEmpty, gIdx);
+        const validSpot = resolveDeterministicGemCraterSpot(gx, gz, gIdx);
+        if (validSpot) {
+            createMineGemCraterSite(validSpot.x, validSpot.z, isEmpty, gIdx);
         }
     });
 
@@ -13759,7 +14051,7 @@ window.CIVILIAN_AGENTS = CIVILIAN_AGENTS;
 window.updateWorldGenConfig = function(key, val) {
     if (!window.WORLD_GEN_CONFIG) return;
     if (key === 'biome') {
-        window.setPlanetBiome(val, false);
+        window.setPlanetBiome(val, true);
         return;
     }
     if (!(key in window.WORLD_GEN_CONFIG)) return;

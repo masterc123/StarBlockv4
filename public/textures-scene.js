@@ -1853,6 +1853,26 @@ const SCENE_INTEGRITY_VALIDATOR = {
         }
         return entry;
     },
+    _findFirstInvalidAncestor(node) {
+        let curr = node;
+        let firstBad = node;
+        const chain = [];
+        while (curr) {
+            const label = curr.name || curr.type || curr.uuid || 'Object3D';
+            chain.push(label);
+            const badPos = !curr.position || !Number.isFinite(curr.position.x) || !Number.isFinite(curr.position.y) || !Number.isFinite(curr.position.z);
+            const badScale = !curr.scale || !Number.isFinite(curr.scale.x) || !Number.isFinite(curr.scale.y) || !Number.isFinite(curr.scale.z);
+            const badQuat = !curr.quaternion || !Number.isFinite(curr.quaternion.x) || !Number.isFinite(curr.quaternion.y) || !Number.isFinite(curr.quaternion.z) || !Number.isFinite(curr.quaternion.w);
+            if (badPos || badScale || badQuat) {
+                firstBad = curr;
+            }
+            curr = curr.parent;
+        }
+        return {
+            firstInvalidAncestor: firstBad ? (firstBad.name || firstBad.type || firstBad.uuid) : 'unknown',
+            parentChain: chain.join(' -> ')
+        };
+    },
     validateSceneGraph(rootObj, subsystemContext = 'render-loop') {
         const targetRoot = rootObj || (typeof scene !== 'undefined' ? scene : window.scene);
         if (!targetRoot) return { valid: false, repaired: 0, repairedCount: 0, invalidCount: 0, reports: this.reports };
@@ -1874,33 +1894,14 @@ const SCENE_INTEGRITY_VALIDATOR = {
             if (Array.isArray(node.children)) {
                 for (let i = node.children.length - 1; i >= 0; i--) {
                     const child = node.children[i];
-                    const hasBadPos = !child || !child.position ||
-                        !Number.isFinite(child.position.x) ||
-                        !Number.isFinite(child.position.y) ||
-                        !Number.isFinite(child.position.z);
-                    const hasBadScale = child && child.scale && (
-                        !Number.isFinite(child.scale.x) ||
-                        !Number.isFinite(child.scale.y) ||
-                        !Number.isFinite(child.scale.z)
-                    );
-                    const hasBadMatrix = !child || !child.matrixWorld || this._hasInvalidMatrix(child.matrixWorld);
-                    const isInvalid =
+                    if (
                         child === undefined ||
                         child === null ||
                         typeof child !== 'object' ||
                         !child.isObject3D ||
-                        typeof child.visible === 'undefined' ||
-                        !Array.isArray(child.children) ||
-                        hasBadPos ||
-                        hasBadScale ||
-                        hasBadMatrix;
-
-                    if (isInvalid) {
+                        !Array.isArray(child.children)
+                    ) {
                         const ud = (child && child.userData) || (node && node.userData) || {};
-                        const posDesc = child && child.position
-                            ? `pos=(${child.position.x}, ${child.position.y}, ${child.position.z})`
-                            : 'pos=missing';
-                        const matDesc = hasBadMatrix ? 'matrixWorld=NaN/corrupted' : 'matrixWorld=ok';
                         this.recordInvalidObject({
                             rawObject: child,
                             name: child && child.name ? child.name : `children[${i}]`,
@@ -1912,14 +1913,101 @@ const SCENE_INTEGRITY_VALIDATOR = {
                             subsystem: ud._subsystem || subsystemContext,
                             participantId: ud._participantId || ud.participantId || null,
                             bridgeId: ud._bridgeId !== undefined ? ud._bridgeId : (ud.bridgeId !== undefined ? ud.bridgeId : null),
-                            invalidPositionOrMatrix: `${posDesc}, ${matDesc}`,
+                            invalidPositionOrMatrix: 'Non-Object3D or null child',
                             reason: child === undefined || child === null
                                 ? 'Null or undefined child in Object3D.children'
-                                : (!child.isObject3D || typeof child.visible === 'undefined'
-                                    ? 'Non-Object3D or missing .visible property'
-                                    : 'NaN position or corrupted matrixWorld')
+                                : 'Non-Object3D or corrupted children array'
                         });
-                        // Remove corrupted or non-finite objects from the scene so we never leave dummy (0,0,0) artifacts
+                        node.children.splice(i, 1);
+                        if (child && child.parent === node) {
+                            child.parent = null;
+                        }
+                        repairedCount++;
+                        this.totalRepairs++;
+                        continue;
+                    }
+
+                    if (typeof child.visible === 'undefined') {
+                        child.visible = true;
+                    }
+
+                    // Check and repair local rotation / quaternion / scale before checking matrixWorld
+                    let repairedLocalTransform = false;
+                    if (child.scale && (
+                        !Number.isFinite(child.scale.x) ||
+                        !Number.isFinite(child.scale.y) ||
+                        !Number.isFinite(child.scale.z) ||
+                        Math.abs(child.scale.x) < 1e-7 ||
+                        Math.abs(child.scale.y) < 1e-7 ||
+                        Math.abs(child.scale.z) < 1e-7
+                    )) {
+                        child.scale.set(
+                            Number.isFinite(child.scale.x) && Math.abs(child.scale.x) >= 1e-7 ? child.scale.x : 1,
+                            Number.isFinite(child.scale.y) && Math.abs(child.scale.y) >= 1e-7 ? child.scale.y : 1,
+                            Number.isFinite(child.scale.z) && Math.abs(child.scale.z) >= 1e-7 ? child.scale.z : 1
+                        );
+                        repairedLocalTransform = true;
+                    }
+                    if (child.rotation && (
+                        !Number.isFinite(child.rotation.x) ||
+                        !Number.isFinite(child.rotation.y) ||
+                        !Number.isFinite(child.rotation.z)
+                    )) {
+                        child.rotation.set(
+                            Number.isFinite(child.rotation.x) ? child.rotation.x : 0,
+                            Number.isFinite(child.rotation.y) ? child.rotation.y : 0,
+                            Number.isFinite(child.rotation.z) ? child.rotation.z : 0
+                        );
+                        repairedLocalTransform = true;
+                    }
+                    if (child.quaternion && (
+                        !Number.isFinite(child.quaternion.x) ||
+                        !Number.isFinite(child.quaternion.y) ||
+                        !Number.isFinite(child.quaternion.z) ||
+                        !Number.isFinite(child.quaternion.w)
+                    )) {
+                        child.quaternion.set(0, 0, 0, 1);
+                        repairedLocalTransform = true;
+                    }
+
+                    const hasBadPos = !child.position ||
+                        !Number.isFinite(child.position.x) ||
+                        !Number.isFinite(child.position.y) ||
+                        !Number.isFinite(child.position.z);
+
+                    if (!hasBadPos && (repairedLocalTransform || !child.matrixWorld || this._hasInvalidMatrix(child.matrixWorld))) {
+                        try {
+                            child.updateMatrix();
+                            if (node.matrixWorld && !this._hasInvalidMatrix(node.matrixWorld)) {
+                                child.matrixWorld.multiplyMatrices(node.matrixWorld, child.matrix);
+                            } else {
+                                child.matrixWorld.copy(child.matrix);
+                            }
+                        } catch (_e) {}
+                    }
+
+                    const hasBadMatrix = !child.matrixWorld || this._hasInvalidMatrix(child.matrixWorld);
+                    if (hasBadPos || hasBadMatrix) {
+                        const ud = (child && child.userData) || (node && node.userData) || {};
+                        const ancestorInfo = this._findFirstInvalidAncestor(child);
+                        const posDesc = child && child.position
+                            ? `pos=(${child.position.x}, ${child.position.y}, ${child.position.z})`
+                            : 'pos=missing';
+                        const matDesc = hasBadMatrix ? 'matrixWorld=NaN/corrupted' : 'matrixWorld=ok';
+                        this.recordInvalidObject({
+                            rawObject: child,
+                            name: child && child.name ? child.name : `children[${i}]`,
+                            type: child && child.type ? child.type : typeof child,
+                            parent: node,
+                            parentName: `${node.name || node.type || node.uuid} [chain: ${ancestorInfo.parentChain}]`,
+                            uuid: child && child.uuid ? child.uuid : null,
+                            creationSource: ud._creationSource || subsystemContext,
+                            subsystem: ud._subsystem || subsystemContext,
+                            participantId: ud._participantId || ud.participantId || null,
+                            bridgeId: ud._bridgeId !== undefined ? ud._bridgeId : (ud.bridgeId !== undefined ? ud.bridgeId : null),
+                            invalidPositionOrMatrix: `${posDesc}, ${matDesc}, firstInvalidAncestor=${ancestorInfo.firstInvalidAncestor}`,
+                            reason: 'NaN position or corrupted matrixWorld'
+                        });
                         node.children.splice(i, 1);
                         if (child && child.parent === node) {
                             child.parent = null;
@@ -1944,7 +2032,7 @@ const SCENE_INTEGRITY_VALIDATOR = {
     }
 };
 
-// Guard THREE.Object3D.prototype.add against undefined/invalid objects or NaN coordinates entering .children
+// Guard THREE.Object3D.prototype.add and lookAt against undefined/invalid objects or NaN coordinates
 if (typeof THREE !== 'undefined' && THREE.Object3D && !THREE.Object3D.prototype._starblockGuardedAdd) {
     const _origObject3DAdd = THREE.Object3D.prototype.add;
     THREE.Object3D.prototype.add = function (...objects) {
@@ -1988,6 +2076,29 @@ if (typeof THREE !== 'undefined' && THREE.Object3D && !THREE.Object3D.prototype.
         if (validObjects.length === 0) return this;
         return _origObject3DAdd.apply(this, validObjects);
     };
+
+    const _origLookAt = THREE.Object3D.prototype.lookAt;
+    THREE.Object3D.prototype.lookAt = function (x, y, z) {
+        let tx = x, ty = y, tz = z;
+        if (x && typeof x === 'object' && 'x' in x) {
+            tx = x.x;
+            ty = x.y;
+            tz = x.z;
+        }
+        if (!Number.isFinite(tx) || !Number.isFinite(ty) || !Number.isFinite(tz)) {
+            return this;
+        }
+        if (this.position) {
+            const dx = tx - this.position.x;
+            const dy = ty - this.position.y;
+            const dz = tz - this.position.z;
+            if (dx * dx + dy * dy + dz * dz < 1e-8) {
+                return this;
+            }
+        }
+        return _origLookAt.call(this, tx, ty, tz);
+    };
+
     THREE.Object3D.prototype._starblockGuardedAdd = true;
 }
 window.SCENE_INTEGRITY_VALIDATOR = SCENE_INTEGRITY_VALIDATOR;
@@ -2028,6 +2139,7 @@ const SFX = {
                     window.RAID_MUSIC.start();
                 } else {
                     window.RAID_MUSIC.ensureNodes();
+                    window.RAID_MUSIC.syncAudioFilePlayback();
                     if (!window.RAID_MUSIC.timerId) window.RAID_MUSIC.scheduleLoop();
                     if (!window.RAID_MUSIC._firstAudibleBeatPlayed) {
                         window.RAID_MUSIC._firstAudibleBeatPlayed = true;
@@ -2137,9 +2249,9 @@ const SFX = {
 window.SFX = SFX;
 
 // ============================================================================
-// 2A. COMMAND & CONQUER: RED ALERT ("HELL MARCH" / "GRINDER") PROCEDURAL AI MUSIC ENGINE
-//     Industrial Military Synth-Rock: Heavy Boot-Stomp Cadence, Distorted Power-Chord
-//     Bass Guitar Riff, Militant Snare March, Brass Command Stabs & Dynamic Combat Lead
+// 2A. STARCRAFT II KOPRULU SOUNDTRACK AUDIO ENGINE + TACTICAL SYNTH ACCOMPANIMENT
+//     Plays the dedicated /sc2-soundtrack.wav background music file with seamless
+//     looping, dynamic combat intensity scaling, and multi-track switching.
 // ============================================================================
 const RAID_MUSIC = {
     playing: false,
@@ -2152,18 +2264,38 @@ const RAID_MUSIC = {
     compressor: null,
     distortionCurve: null,
     noiseBuffer: null,
+    audioEl: null,
+    audioSrc: '/sc2-soundtrack.wav',
     tracks: [
         {
-            name: 'IRON MARCH (HELL MARCH)',
+            name: 'KOPRULU FRONTIER (SC2 SOUNDTRACK)',
+            bpm: 120,
+            useAudioFile: true,
+            playbackRate: 1.0,
+            bassRiff: [
+                41.20, 41.20, 82.41, 41.20,  49.00, 49.00, 55.00, 49.00,
+                55.00, 55.00, 110.0, 55.00,  65.41, 65.41, 73.42, 65.41,
+                41.20, 41.20, 82.41, 41.20,  49.00, 49.00, 73.42, 55.00,
+                65.41, 65.41, 73.42, 65.41,  61.74, 55.00, 49.00, 41.20
+            ],
+            leadMelody: [
+                329.63, 0, 392.00, 440.00,   493.88, 0, 440.00, 392.00,
+                392.00, 0, 440.00, 493.88,   587.33, 0, 493.88, 440.00,
+                440.00, 0, 493.88, 554.37,   659.25, 0, 554.37, 493.88,
+                523.25, 0, 587.33, 659.25,   587.33, 523.25, 493.88, 392.00
+            ]
+        },
+        {
+            name: 'TERRAN DOMINION (HEAVEN\x27S DEVILS)',
             bpm: 130,
-            // E Phrygian / E Minor Heavy Industrial Power-Chord Ostinato (E1=41.20, F1=43.65, G1=49.00, A1=55.00, Bb1=58.27, B1=61.74, C2=65.41, D2=73.42, E2=82.41)
+            useAudioFile: true,
+            playbackRate: 1.06,
             bassRiff: [
                 41.20, 41.20, 82.41, 41.20,  43.65, 43.65, 49.00, 41.20,
                 41.20, 41.20, 82.41, 41.20,  65.41, 61.74, 55.00, 49.00,
                 41.20, 41.20, 82.41, 41.20,  43.65, 43.65, 49.00, 55.00,
                 61.74, 61.74, 65.41, 61.74,  55.00, 49.00, 43.65, 41.20
             ],
-            // Brass / Industrial Lead Stabs (0 = rest)
             leadMelody: [
                 329.63, 0, 329.63, 0,  349.23, 0, 392.00, 329.63,
                 0, 0, 329.63, 0,       523.25, 493.88, 440.00, 392.00,
@@ -2172,8 +2304,10 @@ const RAID_MUSIC = {
             ]
         },
         {
-            name: 'SOVIET GRINDER (ARMOR ASSAULT)',
+            name: 'SECTOR-09 SIEGE (ARMOR ASSAULT)',
             bpm: 138,
+            useAudioFile: true,
+            playbackRate: 0.94,
             bassRiff: [
                 36.71, 36.71, 73.42, 36.71,  41.20, 43.65, 36.71, 36.71,
                 36.71, 36.71, 73.42, 36.71,  55.00, 49.00, 43.65, 41.20,
@@ -2186,31 +2320,51 @@ const RAID_MUSIC = {
                 293.66, 0, 349.23, 392.00,   440.00, 0, 466.16, 523.25,
                 587.33, 0, 523.25, 466.16,   440.00, 392.00, 349.23, 293.66
             ]
-        },
-        {
-            name: 'DEFCON VALKYRIE (AIR SUPREMACY)',
-            bpm: 142,
-            bassRiff: [
-                41.20, 82.41, 41.20, 82.41,  49.00, 98.00, 49.00, 98.00,
-                55.00, 110.0, 55.00, 110.0,  61.74, 65.41, 61.74, 49.00,
-                41.20, 82.41, 41.20, 82.41,  49.00, 98.00, 55.00, 110.0,
-                65.41, 65.41, 61.74, 55.00,  49.00, 43.65, 41.20, 41.20
-            ],
-            leadMelody: [
-                659.25, 0, 493.88, 523.25,   587.33, 0, 440.00, 493.88,
-                523.25, 0, 392.00, 440.00,   493.88, 523.25, 493.88, 392.00,
-                659.25, 0, 587.33, 523.25,   493.88, 0, 440.00, 392.00,
-                523.25, 493.88, 440.00, 392.00, 349.23, 392.00, 329.63, 0
-            ]
         }
     ],
+    ensureAudioFile() {
+        if (!this.audioEl && typeof Audio !== 'undefined') {
+            try {
+                const audio = new Audio(this.audioSrc);
+                audio.loop = true;
+                audio.preload = 'auto';
+                audio.volume = 0.55;
+                this.audioEl = audio;
+            } catch (e) {}
+        }
+        return this.audioEl;
+    },
+    syncAudioFilePlayback() {
+        const audio = this.ensureAudioFile();
+        if (!audio) return;
+        const track = this.tracks[this.trackIndex % this.tracks.length];
+        const shouldPlay = Boolean(this.playing && !this.muted && !SFX.muted);
+        audio.muted = !shouldPlay;
+        audio.volume = shouldPlay ? Math.min(0.85, 0.48 + this.combatIntensity * 0.25) : 0;
+        if (track && track.playbackRate) {
+            try { audio.playbackRate = track.playbackRate; } catch (e) {}
+        }
+        if (shouldPlay) {
+            if (audio.paused) {
+                const playPromise = audio.play();
+                if (playPromise && typeof playPromise.catch === 'function') {
+                    playPromise.catch(() => {});
+                }
+            }
+        } else {
+            if (!audio.paused) {
+                try { audio.pause(); } catch (e) {}
+            }
+        }
+    },
     ensureNodes() {
+        this.ensureAudioFile();
         SFX.init();
         if (!SFX.ctx) return false;
         const ctx = SFX.ctx;
         if (!this.masterGain) {
             this.masterGain = ctx.createGain();
-            this.masterGain.gain.value = 0.58;
+            this.masterGain.gain.value = 0.22;
             if (typeof ctx.createDynamicsCompressor === 'function') {
                 this.compressor = ctx.createDynamicsCompressor();
                 this.compressor.threshold.setValueAtTime(-16, ctx.currentTime);
@@ -2246,7 +2400,6 @@ const RAID_MUSIC = {
     },
     triggerKickAndBootStomp(now, isHeavyStomp) {
         const ctx = SFX.ctx;
-        // Sub-bass military kick drum
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = 'sine';
@@ -2259,7 +2412,6 @@ const RAID_MUSIC = {
         osc.start(now);
         osc.stop(now + 0.17);
 
-        // Iconic Red Alert Marching Boot-Stomp Thud on beats 0 & 2
         if (isHeavyStomp && this.noiseBuffer) {
             const noise = ctx.createBufferSource();
             noise.buffer = this.noiseBuffer;
@@ -2294,7 +2446,6 @@ const RAID_MUSIC = {
         noise.start(now);
         noise.stop(now + 0.15);
 
-        // Snare body snap
         const body = ctx.createOscillator();
         const bGain = ctx.createGain();
         body.type = 'triangle';
@@ -2326,7 +2477,6 @@ const RAID_MUSIC = {
     },
     triggerPowerChordGuitar(now, rootFreq, duration, accent = false) {
         const ctx = SFX.ctx;
-        // Root + Fifth (1.498x) Overdriven Industrial Chug
         [rootFreq, rootFreq * 1.4983, rootFreq * 2.0].forEach((freq, idx) => {
             const osc = ctx.createOscillator();
             osc.type = idx === 0 ? 'sawtooth' : 'square';
@@ -2357,7 +2507,6 @@ const RAID_MUSIC = {
     triggerCommandBrassAndSynthLead(now, freq, duration) {
         if (!freq || freq <= 0) return;
         const ctx = SFX.ctx;
-        // Detuned dual-sawtooth Soviet Command Brass / Industrial Synth Lead
         [-4.5, 4.5].forEach(detune => {
             const osc = ctx.createOscillator();
             osc.type = 'sawtooth';
@@ -2383,6 +2532,7 @@ const RAID_MUSIC = {
     },
     tick() {
         if (!this.playing || this.muted || SFX.muted) return;
+        this.syncAudioFilePlayback();
         if (!this.ensureNodes()) return;
         const ctx = SFX.ctx;
         if (ctx.state === 'suspended') {
@@ -2391,32 +2541,27 @@ const RAID_MUSIC = {
         }
         this._firstAudibleBeatPlayed = true;
         const track = this.tracks[this.trackIndex % this.tracks.length];
-        const stepDur = (60 / track.bpm) / 4; // 16th-note step
+        const stepDur = (60 / track.bpm) / 4;
         const now = ctx.currentTime + 0.01;
         const s = this.step % 32;
         const beatStep = s % 4;
 
-        // 1. Militant Boot-Stomp & Kick Pattern (Beats 0, 2 + syncopated double-kick on bar end)
         if (beatStep === 0 || (s % 8 === 6 && this.combatIntensity > 0.35)) {
             this.triggerKickAndBootStomp(now, s % 8 === 0 || s % 8 === 4);
         }
-        // 2. Industrial Marching Snare Cadence (Backbeat + military snare roll at phrase end)
         if (s % 8 === 4) {
             this.triggerMilitantSnare(now, true);
         } else if (s >= 28 && (s % 2 === 1)) {
             this.triggerMilitantSnare(now, false);
         }
-        // 3. Driving 16th-note Industrial Hi-Hat
         if (s % 2 === 0 || this.combatIntensity > 0.45) {
             this.triggerHiHat(now, beatStep === 2);
         }
-        // 4. Distorted Power-Chord Guitar & Bass Riff
         const bassFreq = track.bassRiff[s];
         if (bassFreq > 0) {
             const isAccent = (beatStep === 0) || (s % 8 === 3);
             this.triggerPowerChordGuitar(now, bassFreq, stepDur * (isAccent ? 1.85 : 1.15), isAccent);
         }
-        // 5. Command Brass & Synth Lead Melody
         const leadFreq = track.leadMelody[s];
         if (leadFreq > 0 && (s < 16 || this.combatIntensity > 0.15)) {
             this.triggerCommandBrassAndSynthLead(now, leadFreq, stepDur * 2.1);
@@ -2430,6 +2575,7 @@ const RAID_MUSIC = {
             SFX.ctx.resume().catch(() => {});
         }
         if (this.playing) {
+            this.syncAudioFilePlayback();
             if (!this.timerId) this.scheduleLoop();
             if (SFX.ctx && SFX.ctx.state === 'running' && !this.muted && !SFX.muted && !this._firstAudibleBeatPlayed) {
                 this.tick();
@@ -2438,8 +2584,8 @@ const RAID_MUSIC = {
             return;
         }
         this.playing = true;
+        this.syncAudioFilePlayback();
         this.scheduleLoop();
-        // Play immediate first beat if context is running so the player gets instant musical feedback!
         if (SFX.ctx && SFX.ctx.state === 'running' && !this.muted && !SFX.muted) {
             this.tick();
         }
@@ -2463,15 +2609,18 @@ const RAID_MUSIC = {
             SFX.muted = false;
             this.start();
         } else if (wasSuspended && !this.muted) {
-            // Context was suspended by browser autoplay policy; resume and play instead of muting!
             this.muted = false;
             SFX.muted = false;
+            this.syncAudioFilePlayback();
             this.tick();
         } else {
             this.muted = !this.muted;
             if (!this.muted) {
                 SFX.muted = false;
+                this.syncAudioFilePlayback();
                 this.tick();
+            } else {
+                this.syncAudioFilePlayback();
             }
         }
         this.updateHudButton();
@@ -2485,8 +2634,12 @@ const RAID_MUSIC = {
         this.trackIndex = (this.trackIndex + 1) % this.tracks.length;
         this.step = 0;
         this.muted = false;
+        if (this.audioEl) {
+            try { this.audioEl.currentTime = (this.trackIndex * 8.0) % 32.0; } catch (e) {}
+        }
         if (!this.playing) this.start();
         else {
+            this.syncAudioFilePlayback();
             this.scheduleLoop();
             this.tick();
         }
@@ -2495,6 +2648,7 @@ const RAID_MUSIC = {
     },
     setCombatIntensity(level) {
         this.combatIntensity = Math.max(0.15, Math.min(1.0, level));
+        if (this.playing) this.syncAudioFilePlayback();
     },
     updateHudButton() {
         const btn = document.getElementById('hud-music-btn');
@@ -3643,8 +3797,61 @@ const SHADER_ENGINE = {
                     diffuseColor.rgb *= (0.96 + 0.04 * windGust);
                 }
 
-                // 5. Subtle Organic Ground Shading around Zerg Hive (No purple grid pattern on bases!)
-                float creepWetnessBoost = 0.0;`
+                // 5. Organic Zerg Creep Biomass Membrane (Terrain-conforming, organic tendrils & veins, zero grid artifacts)
+                float creepWetnessBoost = 0.0;
+                float creepPulseGlow = 0.0;
+                if (uIsBuilding < 0.5 && uIsGrass < 0.5 && uCreepRadius > 0.5) {
+                    float creepField = 0.0;
+                    float minCreepSignedDist = 999.0;
+                    for (int cn = 0; cn < ${MAX_CREEP_SHADER_NODES}; cn++) {
+                        vec3 cNode = uCreepNodes[cn];
+                        if (cNode.z > 0.5) {
+                            float d = distance(vCustomWorldPos.xz, cNode.xy);
+                            float normD = d / max(1.0, cNode.z);
+                            minCreepSignedDist = min(minCreepSignedDist, d - cNode.z);
+                            if (normD < 1.38) {
+                                float falloff = clamp(1.0 - normD * 0.78, 0.0, 1.0);
+                                creepField += falloff * falloff * (3.0 - 2.0 * falloff);
+                            }
+                        }
+                    }
+                    if (creepField > 0.02 || minCreepSignedDist < 4.5) {
+                        // Organic domain-warped UV coordinates (no grid lines)
+                        vec2 warpOffset = vec2(
+                            sin(vCustomWorldPos.z * 0.23 + uTime * 0.65) + cos(vCustomWorldPos.x * 0.17 - uTime * 0.45),
+                            cos(vCustomWorldPos.x * 0.21 - uTime * 0.55) - sin(vCustomWorldPos.z * 0.19 + uTime * 0.50)
+                        ) * 0.045;
+                        vec2 creepUv1 = vCustomWorldPos.xz * 0.072 + warpOffset;
+                        vec2 creepUv2 = vec2(
+                            vCustomWorldPos.x * 0.051 - vCustomWorldPos.z * 0.064,
+                            vCustomWorldPos.x * 0.064 + vCustomWorldPos.z * 0.051
+                        ) - warpOffset * 0.75 + vec2(uTime * 0.012, -uTime * 0.009);
+                        vec3 cSample1 = texture2D(uCreepTex, creepUv1).rgb;
+                        vec3 cSample2 = texture2D(uCreepTex, creepUv2).rgb;
+                        float bioNoise = dot(cSample1, vec3(0.45, 0.35, 0.20)) * 0.6 + dot(cSample2, vec3(0.30, 0.50, 0.20)) * 0.4;
+                        float edgeDistort = (bioNoise - 0.48) * 4.2 + sin(atan(vCustomWorldPos.z - uCreepCenter.y, vCustomWorldPos.x - uCreepCenter.x) * 7.0 + bioNoise * 6.0) * 1.15;
+                        float effectiveSignedDist = minCreepSignedDist - edgeDistort;
+                        float creepMask = 1.0 - smoothstep(-2.4, 1.35, effectiveSignedDist);
+                        // Keep creep above deep water level while conforming to slopes & hills
+                        float waterCutoff = smoothstep(-0.32, 0.05, vCustomWorldPos.y);
+                        creepMask *= waterCutoff;
+                        if (creepMask > 0.01) {
+                            float veinPattern = smoothstep(0.42, 0.76, abs(cSample1.r - cSample2.g) * 1.85 + cSample1.b * 0.45);
+                            float peristalsis = 0.5 + 0.5 * sin(minCreepSignedDist * 0.85 - uTime * 2.3 + bioNoise * 5.0);
+                            float edgeTendril = smoothstep(0.05, 0.45, creepMask) * (1.0 - smoothstep(0.68, 0.98, creepMask));
+                            vec3 deepBiomass = vec3(0.19, 0.045, 0.24);
+                            vec3 midMembrane = vec3(0.34, 0.08, 0.39);
+                            vec3 arterialVein = vec3(0.56, 0.13, 0.49);
+                            vec3 pustuleGlow = vec3(0.74, 0.22, 0.64);
+                            vec3 creepCol = mix(deepBiomass, midMembrane, clamp(bioNoise * 1.35, 0.0, 1.0));
+                            creepCol = mix(creepCol, arterialVein, veinPattern * (0.65 + 0.35 * peristalsis));
+                            creepCol += pustuleGlow * (veinPattern * peristalsis * 0.22 + edgeTendril * 0.18);
+                            diffuseColor.rgb = mix(diffuseColor.rgb, creepCol, creepMask * 0.90);
+                            creepWetnessBoost = creepMask;
+                            creepPulseGlow = creepMask * veinPattern * peristalsis;
+                        }
+                    }
+                }`
             ).replace(
                 '#include <roughnessmap_fragment>',
                 `#include <roughnessmap_fragment>
@@ -3656,11 +3863,11 @@ const SHADER_ENGINE = {
                     }
                 }
                 if (uIsRoad > 0.5) {
-                    roughnessFactor = mix(0.92, 0.28, creepWetnessBoost * creepFowVis * 0.75);
+                    roughnessFactor = mix(0.92, 0.22, creepWetnessBoost * creepFowVis * 0.82);
                 } else {
                     roughnessFactor = mix(roughnessFactor, 0.34, uWetness * 0.55);
                     if (creepWetnessBoost > 0.01) {
-                        roughnessFactor = mix(0.92, 0.18, creepWetnessBoost * creepFowVis * 0.85);
+                        roughnessFactor = mix(0.92, 0.16, creepWetnessBoost * creepFowVis * 0.88);
                     }
                 }`
             ).replace(
@@ -3669,6 +3876,9 @@ const SHADER_ENGINE = {
                 totalEmissiveRadiance *= clamp(0.55 + 0.45 * uSunLightFactor, 0.50, 1.0);
                 if (lavaFissureGlow > 0.01) {
                     totalEmissiveRadiance += vec3(1.0, 0.36, 0.04) * (lavaFissureGlow * 0.65);
+                }
+                if (creepPulseGlow > 0.01) {
+                    totalEmissiveRadiance += vec3(0.46, 0.09, 0.42) * (creepPulseGlow * 0.42);
                 }
                 if (uHasFow > 0.5 && uTitleScreen < 0.5) {
                     vec2 eFowUv = vec2((vCustomWorldPos.x / uMapSize) + 0.5, 0.5 - (vCustomWorldPos.z / uMapSize));

@@ -1105,15 +1105,18 @@ body {
 }
 .action-btn.secondary { background: #1a2433; color: var(--sc-text); border: 1px solid var(--sc-border); }
 
-#world-ui { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 3; }
+#world-ui { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 3; contain: layout style; }
 .hp-pip {
-    position: absolute; width: 34px; height: 4px;
+    position: absolute; left: 0; top: 0; width: 34px; height: 4px;
     background: rgba(0,0,0,0.85); border: 1px solid rgba(255,255,255,0.25);
-    transform: translate(-50%, -50%);
+    transform: translate3d(-9999px, -9999px, 0) translate(-50%, -50%);
+    will-change: transform;
+    transition: none !important;
+    pointer-events: none;
 }
 .hp-pip.structure { width: 50px; height: 5px; border-color: rgba(0, 229, 255, 0.6); }
 .hp-pip.selected-unit { border-color: #00ff66; box-shadow: 0 0 6px rgba(0, 255, 102, 0.8); height: 5px; }
-.hp-pip-bar { height: 100%; width: 100%; transition: width 0.12s; }
+.hp-pip-bar { height: 100%; width: 100%; transition: width 0.08s linear; }
 .combat-float {
     position: absolute; font-family: 'JetBrains Mono', monospace; font-weight: 800;
     font-size: 11px; transform: translate(-50%, -50%);
